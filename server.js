@@ -7,7 +7,7 @@ var express = require('express'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    bcyrpt = require('bcrypt'),
+    bcrypt = require('bcrypt'),
     jwt = require('jsonwebtoken'),
     appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8'));
 
@@ -61,22 +61,30 @@ app.use(morgan('dev'));
 // Use cookieParser for handling of cookies
 app.use(cookieParser());
 
+
 // TESTING ROUTE
 app.get('/setup', function(req, res) {
 
-    // create a sample user
-    var ali = new Users({
-        name: 'Alistair Madden',
-        password: 'password'
+    // wipe collection
+    Users.remove(function(err, removed) {
+        console.log('Removed ' + removed.n + ' documents.')
     });
 
-    // save the sample user
-    ali.save(function(err) {
-        if (err) throw err;
+    bcrypt.hash('password', saltRounds, function(err, hash) {
+        // create a sample user
+        var ali = new Users({
+            username: 'Alistair Madden',
+            hash: hash
+        });
 
-        console.log('User saved successfully');
-        res.json({
-            success: true
+        // save the sample user
+        ali.save(function(err) {
+            if (err) throw err;
+
+            console.log('User saved successfully');
+            res.json({
+                success: true
+            });
         });
     });
 });
@@ -96,13 +104,19 @@ apiRoutes.post('/loggedin', function(req, res) {
 function isAuthenticated(req) {
     if (req.cookies['X-XSRF-TOKEN']) {
         if (req.cookies['X-XSRF-TOKEN'] === appDetails.secret) {
-            if (req.cookies['session']) {
-            }
+            if (req.cookies['session']) {}
         }
     } else {
         return 401;
     }
 }
+
+// route to return all users (GET http://localhost:8080/api/users)
+apiRoutes.get('/users', function(req, res) {
+    Users.find({}, function(err, users) {
+        res.json(users);
+    });
+});
 
 // Sign up route
 /*app.post('/api/signup', function(req, res) {
@@ -110,29 +124,26 @@ function isAuthenticated(req) {
 });*/
 
 // log in route
-app.post('/api/login', function(req, res) {
-    // if (req.cookies) {
-    //     console.log(req.cookies);
-    //     res.send('cookie already created');
-    // } else {
-        // find the user
-        Users.findOne({
-            name: req.body.name
-        }, function(err, user) {
+apiRoutes.post('/login', function(req, res) {
 
-            console.log(user.password);
+    console.log(req.body.username);
 
-            if (err) throw err;
+    // find the user
+    Users.findOne({
+        username: req.body.username
+    }, function(err, user) {
 
-            if (!user) {
-                res.json({
-                    success: false,
-                    message: 'Authentication failed. User not found.'
-                });
-            } else if (user) {
+        if (err) throw err;
 
-                // check if password matches
-                if (user.password != req.body.password) {
+        if (!user) {
+            res.json({
+                success: false,
+                message: 'Authentication failed. User not found.'
+            });
+        } else if (user) {
+
+            bcrypt.compare(req.body.password, user.hash, function(err, result) {
+                if (result !== true) {
                     res.json({
                         success: false,
                         message: 'Authentication failed. Wrong password.'
@@ -157,19 +168,21 @@ app.post('/api/login', function(req, res) {
                         token: token
                     });
                 }
+            });
+        }
 
-            }
-
-        });
+    });
     // }
 });
 
 // log out route
-app.post('/api/logout', function(req, res) {
+apiRoutes.post('/api/logout', function(req, res) {
     req.logOut();
     res.send(200);
 });
 
+// apply the routes to our application with the prefix /api
+app.use('/api', apiRoutes);
 
 /*
   All other routes

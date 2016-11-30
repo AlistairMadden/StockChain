@@ -2,7 +2,7 @@
     'use strict';
 
     angular.module('stockChain', ['ui.router', 'components.home', 'api.transactions', 'components.transactions',
-            'components.login', 'api.AuthService'
+            'components.login', 'components.profile', 'api.AuthService', 'ProfileService'
         ])
         .config(function($urlRouterProvider, $stateProvider, $locationProvider, AUTH_EVENTS, $httpProvider) {
 
@@ -30,6 +30,23 @@
                     url: '/login',
                     templateUrl: 'components/login/login.html',
                     controller: 'loginController'
+                })
+                .state('profile', {
+                    url: '/profile',
+                    templateUrl: 'components/profile/profile.html',
+                    controller: 'profileController',
+                    resolve: {
+                        profileDetails: function(ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function(res) {
+                              console.log(res.data);
+                              return res.data;
+                            }).catch(function(res) {
+                              console.log("ERROR");
+                              console.log(res.data);
+                              $state.go('login');
+                            });
+                        }
+                    }
                 });
 
             $urlRouterProvider.otherwise('/404');

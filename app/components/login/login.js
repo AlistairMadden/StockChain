@@ -7,7 +7,7 @@
 
     // Define the component and controller loaded in our test
     angular.module('components.login', [])
-        .controller('loginController', function($scope, $rootScope, AUTH_EVENTS, AuthService) {
+        .controller('loginController', function($scope, $rootScope, AuthService, $state) {
             $scope.credentials = {
                 username: '',
                 password: ''
@@ -22,12 +22,13 @@
              * @param credentials
              */
             $scope.login = function (credentials) {
-                AuthService.login(credentials).then(function success (user) {
-                    $scope.setCurrentUser(user);
-                    $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
-                }, function failure () {
-                    $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
-                })
+                AuthService.login(credentials).then(function(res) {
+                    console.log(res.data);
+                    $state.go('profile');
+                }).catch(function (res) {
+                  console.log('error');
+                  console.log(res.data);
+                });
             }
         })
 })();

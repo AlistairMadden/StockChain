@@ -49,6 +49,9 @@ app.all('*', function(req, res, next) {
 // Make files in app directory available
 app.use(express.static(__dirname + '/app'));
 
+// Make nodejs modules available
+app.use(express.static(__dirname + '/node_modules'));
+
 // Use body parser so information can be grabbed from POST and/or URL parameters
 app.use(bodyParser.urlencoded({
     extended: false
@@ -97,26 +100,29 @@ app.get('/setup', function(req, res) {
 var apiRoutes = express.Router();
 
 // log in check route
-apiRoutes.post('/loggedin', function(req, res) {
-    res.sendStatus(isAuthenticated(req));
-});
+// apiRoutes.post('/loggedin', function(req, res) {
+//     res.sendStatus(isAuthenticated(req));
+// });
 
-function isAuthenticated(req) {
-    if (req.cookies['X-XSRF-TOKEN']) {
-        if (req.cookies['X-XSRF-TOKEN'] === appDetails.secret) {
-            if (req.cookies['session']) {}
-        }
-    } else {
-        return 401;
-    }
-}
-
-// route to return all users (GET http://localhost:8080/api/users)
-apiRoutes.get('/users', function(req, res) {
-    Users.find({}, function(err, users) {
-        res.json(users);
-    });
-});
+// function isAuthenticated(req) {
+//     if (req.cookies['X-XSRF-TOKEN']) {
+//         if (req.cookies['X-XSRF-TOKEN'] === appDetails.secret) {
+//             if (req.cookies['session']) {
+//               jwt.verify(req.cookies['session'], app.get(appDetails.secret), function(err, decoded) {
+//       if (err) {
+//         return res.json({ success: false, message: 'Failed to authenticate token.' });
+//       } else {
+//         // if everything is good, save to request for use in other routes
+//         req.decoded = decoded;
+//         next();
+//       }
+//     });
+//             }
+//         }
+//     } else {
+//         return 401;
+//     }
+// }
 
 // Sign up route
 /*app.post('/api/signup', function(req, res) {
@@ -126,8 +132,6 @@ apiRoutes.get('/users', function(req, res) {
 // log in route
 apiRoutes.post('/login', function(req, res) {
 
-    console.log(req.body.username);
-
     // find the user
     Users.findOne({
         username: req.body.username
@@ -136,49 +140,42 @@ apiRoutes.post('/login', function(req, res) {
         if (err) throw err;
 
         if (!user) {
-            res.json({
-                success: false,
-                message: 'Authentication failed. User not found.'
+            res.status(401).send({
+                reason: 'usernameError'
             });
         } else if (user) {
 
             bcrypt.compare(req.body.password, user.hash, function(err, result) {
                 if (result !== true) {
-                    res.json({
-                        success: false,
-                        message: 'Authentication failed. Wrong password.'
+                    res.status(401).send({
+                        reson: 'passwordError'
                     });
                 } else {
 
-                    // if user is found and password is right
-                    // create a token
+                    // If user is found and password is right create a token
                     var token = jwt.sign(user, appDetails.secret);
 
+                    // Store jwt in a cookie
                     res.cookie('token', token, {
                         httpOnly: true,
                         secure: true
                     });
 
-                    res.cookie('X-XSRF-TOKEN', appDetails.secret);
+                    res.cookie('XSRF-TOKEN', appDetails.secret);
 
-                    // return the information including token as JSON
-                    res.json({
-                        success: true,
-                        message: 'Enjoy your token!',
-                        token: token
-                    });
+                    res.status(200).send({
+                        message: 'Successfully logged in.'
+                    })
                 }
+
             });
         }
-
     });
-    // }
 });
 
 // log out route
-apiRoutes.post('/api/logout', function(req, res) {
-    req.logOut();
-    res.send(200);
+apiRoutes.post('/logout', function(req, res) {
+
 });
 
 // apply the routes to our application with the prefix /api
@@ -187,6 +184,36 @@ app.use('/api', apiRoutes);
 /*
   All other routes
  */
+
+var protectedRoutes = express.Router();
+
+protectedRoutes.get('/profile', function(req, res) {
+  console.log(req.cookies);
+  if (req.cookies['XSRF-TOKEN']) {
+      if (req.cookies['XSRF-TOKEN'] === appDetails.secret) {
+          if (req.cookies['token']) {
+              jwt.verify(req.cookies['token'], appDetails.secret, function(err, decoded) {
+                  if (err) {
+                      res.status(500).send({message: err});
+                  } else {
+                    console.log('JWT Verified')
+                    res.send({decoded: decoded})
+                  }
+              });
+          }
+          else {
+            res.status(401).send({message: "no session cookie"});
+          }
+      }
+      else {
+        res.status(401).send({message: "XSRF-TOKEN does not match"})
+      }
+  } else {
+      res.status(401).send();
+  }
+});
+
+app.use('/user', protectedRoutes);
 
 app.get('/*', function(req, res) {
     res.sendFile(path.join(__dirname + '/index.html'));

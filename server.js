@@ -76,7 +76,7 @@ app.get('/setup', function(req, res) {
     bcrypt.hash('password', saltRounds, function(err, hash) {
         // create a sample user
         var ali = new Users({
-            username: 'Alistair Madden',
+            username: 'Alistair.Madden@me.com',
             hash: hash
         });
 
@@ -148,7 +148,7 @@ apiRoutes.post('/login', function(req, res) {
             bcrypt.compare(req.body.password, user.hash, function(err, result) {
                 if (result !== true) {
                     res.status(401).send({
-                        reson: 'passwordError'
+                        reason: 'passwordError'
                     });
                 } else {
 

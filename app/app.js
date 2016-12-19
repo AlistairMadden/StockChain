@@ -38,12 +38,12 @@
                     resolve: {
                         profileDetails: function(ProfileService, $state) {
                             return ProfileService.getProfileDetails().then(function(res) {
-                              console.log(res.data);
-                              return res.data;
+                                console.log(res.data);
+                                return res.data;
                             }).catch(function(res) {
-                              console.log("ERROR");
-                              console.log(res.data);
-                              $state.go('login');
+                                console.log("ERROR");
+                                console.log(res.data);
+                                $state.go('login');
                             });
                         }
                     }

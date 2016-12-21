@@ -1,6 +1,6 @@
 var express = require('express'),
     app = express(),
-    mongoose = require('mongoose'),
+    sql = require('mysql'),
     morgan = require('morgan'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser'),
@@ -16,13 +16,20 @@ const saltRounds = 10;
 /*
   DB Setup
 */
-mongoose.connect(appDetails.dbURL);
-var localUserSchema = new mongoose.Schema({
-    username: String,
-    hash: String
-});
 
-var Users = mongoose.model('userauths', localUserSchema);
+var sqlConnection = sql.createConnection({
+    host: appDetails.sqlDbUrl,
+    user: appDetails.sqlDbUser,
+    password: appDetails.sqlDbPassword,
+    database: appDetails.sqlDbName
+})
+
+// connect to the DB
+sqlConnection.connect(function(err){
+    if(err){
+        res.status(500).send({reason: "dbConnectionError"});
+    }
+});
 
 
 /*
@@ -64,30 +71,26 @@ app.use(morgan('dev'));
 // Use cookieParser for handling of cookies
 app.use(cookieParser());
 
-
 // TESTING ROUTE
 app.get('/setup', function(req, res) {
 
-    // wipe collection
-    Users.remove(function(err, removed) {
-        console.log('Removed ' + removed.n + ' documents.')
-    });
-
+    // simple user's password is password
     bcrypt.hash('password', saltRounds, function(err, hash) {
-        // create a sample user
-        var ali = new Users({
-            username: 'Alistair.Madden@me.com',
-            hash: hash
+
+        // create a new simple user
+        user = {username: "alistair.madden@me.com", password: hash}
+
+        // insert user (automatic sanitisation)
+        sqlConnection.query("INSERT INTO accountAuthorisation SET ?", user, function(err, res) {
+            if(err){
+                res.status(500).send({reason: "dbInsertionError"});
+            }
         });
 
-        // save the sample user
-        ali.save(function(err) {
-            if (err) throw err;
-
-            console.log('User saved successfully');
-            res.json({
-                success: true
-            });
+        sqlConnection.end(function(err){
+            if(err){
+                res.status(500).send({reason: "dbConnectionCloseError"});
+            }
         });
     });
 });
@@ -99,61 +102,26 @@ app.get('/setup', function(req, res) {
 
 var apiRoutes = express.Router();
 
-// log in check route
-// apiRoutes.post('/loggedin', function(req, res) {
-//     res.sendStatus(isAuthenticated(req));
-// });
-
-// function isAuthenticated(req) {
-//     if (req.cookies['X-XSRF-TOKEN']) {
-//         if (req.cookies['X-XSRF-TOKEN'] === appDetails.secret) {
-//             if (req.cookies['session']) {
-//               jwt.verify(req.cookies['session'], app.get(appDetails.secret), function(err, decoded) {
-//       if (err) {
-//         return res.json({ success: false, message: 'Failed to authenticate token.' });
-//       } else {
-//         // if everything is good, save to request for use in other routes
-//         req.decoded = decoded;
-//         next();
-//       }
-//     });
-//             }
-//         }
-//     } else {
-//         return 401;
-//     }
-// }
-
-// Sign up route
-/*app.post('/api/signup', function(req, res) {
-    if(req.cookies.token)
-});*/
-
 // log in route
-apiRoutes.post('/login', function(req, res) {
+apiRoutes.post('/login', function (req, res) {
 
-    // find the user
-    Users.findOne({
-        username: req.body.username
-    }, function(err, user) {
+    sqlConnection.query("SELECT * FROM accountAuthorisation WHERE username = ?", req.body.username, function (err,
+                                                                                                              rows) {
+        if (err) {
+            res.status(500).send();
+        }
 
-        if (err) throw err;
+        if (!(rows === undefined || rows.length === 0)) {
 
-        if (!user) {
-            res.status(401).send({
-                reason: 'usernameError'
-            });
-        } else if (user) {
+            bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
 
-            bcrypt.compare(req.body.password, user.hash, function(err, result) {
-                if (result !== true) {
-                    res.status(401).send({
-                        reason: 'passwordError'
-                    });
-                } else {
+                if (matchingHash !== true) {
+                    res.status(401).send({reason: "passwordError"});
+                }
+                else {
 
                     // If user is found and password is right create a token
-                    var token = jwt.sign(user, appDetails.secret);
+                    var token = jwt.sign(req.body.username, appDetails.secret);
 
                     // Store jwt in a cookie
                     res.cookie('token', token, {
@@ -163,12 +131,12 @@ apiRoutes.post('/login', function(req, res) {
 
                     res.cookie('XSRF-TOKEN', appDetails.secret);
 
-                    res.status(200).send({
-                        message: 'Successfully logged in.'
-                    })
+                    res.status(200).send({message: 'Successfully logged in.'});
                 }
-
             });
+        }
+        else {
+            res.status(401).send({reason: "usernameError"});
         }
     });
 });

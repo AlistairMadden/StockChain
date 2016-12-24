@@ -1,0 +1,9 @@
+node_modules/
+.idea/
+cert.csr
+certificate.pem
+private.key
+data/
+appDetails.json
+*.sql
+*.log

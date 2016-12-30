@@ -22,7 +22,7 @@ var sqlConnection = sql.createConnection({
     user: appDetails.sqlDbUser,
     password: appDetails.sqlDbPassword,
     database: appDetails.sqlDbName
-})
+});
 
 // connect to the DB
 sqlConnection.connect(function(err){
@@ -78,18 +78,15 @@ app.get('/setup', function(req, res) {
     bcrypt.hash('password', saltRounds, function(err, hash) {
 
         // create a new simple user
-        user = {username: "alistair.madden@me.com", password: hash}
+        user = {username: "alistair.madden@me.com", password: hash};
 
         // insert user (automatic sanitisation)
-        sqlConnection.query("INSERT INTO accountAuthorisation SET ?", user, function(err, res) {
+        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, res) {
             if(err){
                 res.status(500).send({reason: "dbInsertionError"});
             }
-        });
-
-        sqlConnection.end(function(err){
-            if(err){
-                res.status(500).send({reason: "dbConnectionCloseError"});
+            else {
+                res.status(200).send();
             }
         });
     });
@@ -105,13 +102,12 @@ var apiRoutes = express.Router();
 // log in route
 apiRoutes.post('/login', function (req, res) {
 
-    sqlConnection.query("SELECT * FROM accountAuthorisation WHERE username = ?", req.body.username, function (err,
-                                                                                                              rows) {
+    sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
         if (err) {
+            console.log(req.body.username);
             res.status(500).send();
         }
-
-        if (!(rows === undefined || rows.length === 0)) {
+        else if (!(rows === undefined || rows.length === 0)) {
 
             bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
 
@@ -164,7 +160,7 @@ protectedRoutes.get('/profile', function(req, res) {
                   if (err) {
                       res.status(500).send({message: err});
                   } else {
-                    console.log('JWT Verified')
+                    console.log('JWT Verified');
                     res.send({decoded: decoded})
                   }
               });

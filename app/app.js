@@ -31,6 +31,11 @@
                     templateUrl: 'components/login/login.html',
                     controller: 'loginController'
                 })
+                .state('signup', {
+                    url: '/signup',
+                    templateUrl: 'components/signup/signup.html',
+                    controller: 'signupController'
+                })
                 .state('profile', {
                     url: '/profile',
                     templateUrl: 'components/profile/profile.html',

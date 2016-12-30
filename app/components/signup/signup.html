@@ -1,7 +1,7 @@
 <div class="container">
 
   <!-- Login Form -->
-  <form name="loginForm" ng-submit="login(credentials)" novalidate>
+  <form name="signupForm" ng-submit="signup(credentials)" novalidate>
 
     <!-- Email -->
     <div class="form-group" ng-class="{'has-danger': signupForm.email.$invalid && signupForm.email.$touched}">
@@ -9,9 +9,6 @@
       <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
       <p ng-show="signupForm.email.$invalid && signupForm.email.$touched" class="has-danger">Please enter a valid
         email.</p>
-      <span ng-show="usernameError" class="has-danger">Sorry, StockChain does not recognise this email address.</span>
-      <a ng-show="usernameError" ui-sref="signup">Sign up</a>
-      <span ng-show="usernameError" class="has-danger">for an account instead?</span>
     </div>
 
     <!-- Password -->

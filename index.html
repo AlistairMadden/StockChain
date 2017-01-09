@@ -2,42 +2,46 @@
 
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta charset="utf-8">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
 
-    <base href="/">
+  <base href="/">
 
-    <title>StockChain</title>
+  <title>StockChain</title>
 
-    <!--bootstrap and our app css file-->
-    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="app.css">
+  <!--bootstrap and our app css file-->
+  <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="app.css">
 
-    <!--angular and ui-router-->
-    <script src="angular/angular.js"></script>
-    <script src="angular-ui-router/release/angular-ui-router.js"></script>
+  <!--angular and ui-router-->
+  <script src="angular/angular.js"></script>
+  <script src="angular-ui-router/release/angular-ui-router.js"></script>
 
-    <!--our angular app-->
-    <script src="components/home/home.js"></script>
-    <script src="services/transactions/transactions.js"></script>
-    <script src="components/transactions/transactions.js"></script>
-    <script src="services/AuthService/AuthService.js"></script>
-    <script src="components/login/login.js"></script>
-    <script src="services/ProfileService/ProfileService.js"></script>
-    <script src="components/profile/profile.js"></script>
-    <script src="app.js"></script>
+  <!--our angular app-->
+  <script src="components/home/home.js"></script>
+  <script src="services/transactions/transactions.js"></script>
+  <script src="components/transactions/transactions.js"></script>
+  <script src="services/AuthService/AuthService.js"></script>
+  <script src="components/login/login.js"></script>
+  <script src="services/ProfileService/ProfileService.js"></script>
+  <script src="components/profile/profile.js"></script>
+  <script src="components/signup/signup.js"></script>
+  <script src="app.js"></script>
 </head>
 
 <body ng-app="stockChain" ng-controller="stockChain">
 <nav class="navbar navbar-default">
-    <div class="container">
-        <div class="navbar-header">
-            <a class="navbar-brand">StockChain</a>
-        </div>
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand">StockChain</a>
+      <form class="form-inline float-xs-right" ng-show="!loggedIn">
+        <button class="btn btn-outline-success float-right" ui-sref="login">Login</button>
+      </form>
     </div>
+  </div>
 </nav>
 
 <div ui-view></div>

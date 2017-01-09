@@ -1,0 +1,29 @@
+<div class="container">
+
+  <!-- Login Form -->
+  <form name="loginForm" ng-submit="signup(credentials)" novalidate>
+
+    <!-- Email -->
+    <div class="form-group" ng-class="{'has-danger': loginForm.email.$invalid && loginForm.email.$touched}">
+      <label class="control-label" for="email">Email</label>
+      <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
+      <p ng-show="loginForm.email.$invalid && loginForm.email.$touched" class="has-danger">Please enter a valid
+        email.</p>
+    </div>
+
+    <!-- Password Check -->
+    <div class="form-group" ng-class="{'has-danger': (loginForm.passwordCheck.$invalid &&
+        loginForm.passwordCheck.$touched) || ((loginForm.passwordCheck.innerHTML !== loginForm.password.innerHTML) &&
+        loginForm.passwordCheck.$touched)}">
+
+      <label class="control-label" for="passwordCheck">Password</label>
+      <input id="passwordCheck" type="password" class="form-control" name="passwordCheck" ng-model="credentials.password"
+             required>
+    </div>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-primary">Login</button>
+
+  </form>
+
+</div>

@@ -13,6 +13,8 @@
                 password: ''
             };
 
+            $scope.name = "";
+
             /**
              * Sign Up function
              *
@@ -23,19 +25,11 @@
              * @param credentials
              */
             $scope.signup = function (credentials) {
-                if ($scope.credentials.username && $scope.credentials.password) {
+                if ($scope.credentials.username && $scope.credentials.password && $scope.name) {
                     AuthService.login(credentials).then(function (res) {
-                        console.log(res.data);
                         $state.go('profile');
                     }).catch(function (res) {
-                        if (res.data.reason) {
-                            if (res.data.reason === "usernameError") {
-                                $scope.usernameError = true;
-                            }
-                            else if (res.data.reason === "passwordError") {
-                                console.error(res.data.reason);
-                            }
-                        }
+                        console.error("Error creating account");
                     });
                 }
             }

@@ -71,22 +71,39 @@ app.use(morgan('dev'));
 // Use cookieParser for handling of cookies
 app.use(cookieParser());
 
-// TESTING ROUTE
-app.get('/setup', function(req, res) {
+// TESTING ROUTE. Sort callback hell later. Delete later.
+app.get('/setup', function (req, routeRes) {
 
     // simple user's password is password
     bcrypt.hash('password', saltRounds, function(err, hash) {
 
-        // create a new simple user
-        user = {username: "alistair.madden@me.com", password: hash};
+        // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
+        // login
+        var user = {username: "alistair.madden@me.com", password: hash};
 
         // insert user (automatic sanitisation)
-        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, res) {
+        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, dbRes) {
             if(err){
-                res.status(500).send({reason: "dbInsertionError"});
+                routeRes.status(500).send({reason: "dbInsertionError"});
             }
             else {
-                res.status(200).send();
+                sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = 'alistair.madden@me.com'", function (err, dbRes) {
+                    if (err) {
+                        routeRes.status(500).send({reason: "dbQueryError"});
+                    }
+                    else {
+                        var userInfo = {account_id: dbRes[0]['account_id'], name: "Alistair Madden"};
+                        sqlConnection.query("INSERT INTO accountInfo SET ?", userInfo, function (err) {
+                            if (err) {
+                                console.log(err);
+                                routeRes.status(500).send({reason: "dbInsertionError"});
+                            }
+                            else {
+                                routeRes.status(200).send();
+                            }
+                        });
+                    }
+                })
             }
         });
     });
@@ -105,6 +122,7 @@ apiRoutes.post('/login', function (req, res) {
     sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
         if (err) {
             console.log(req.body.username);
+            console.log(err);
             res.status(500).send();
         }
         else if (!(rows === undefined || rows.length === 0)) {
@@ -140,6 +158,44 @@ apiRoutes.post('/login', function (req, res) {
 // log out route
 apiRoutes.post('/logout', function(req, res) {
 
+});
+
+apiRoutes.post('/signup', function (routeRes, req) {
+
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+
+        // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
+        // login
+        var user = {username: req.body.username, password: hash};
+
+        // insert user (automatic sanitisation)
+        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, dbRes) {
+            if(err){
+                routeRes.status(500).send({reason: "dbInsertionError"});
+            }
+            else {
+                sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = 'alistair.madden@me.com'",
+                    function (err, dbRes) {
+
+                    if (err) {
+                        routeRes.status(500).send({reason: "dbQueryError"});
+                    }
+                    else {
+                        var userInfo = {account_id: dbRes[0]['account_id'], name: req.body.name};
+                        sqlConnection.query("INSERT INTO accountInfo SET ?", userInfo, function (err) {
+                            if (err) {
+                                console.log(err);
+                                routeRes.status(500).send({reason: "dbInsertionError"});
+                            }
+                            else {
+                                routeRes.status(200).send();
+                            }
+                        });
+                    }
+                })
+            }
+        });
+    });
 });
 
 // apply the routes to our application with the prefix /api

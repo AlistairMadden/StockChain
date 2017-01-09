@@ -4,10 +4,10 @@
   <form name="loginForm" ng-submit="login(credentials)" novalidate>
 
     <!-- Email -->
-    <div class="form-group" ng-class="{'has-danger': signupForm.email.$invalid && signupForm.email.$touched}">
+    <div class="form-group" ng-class="{'has-danger': loginForm.email.$invalid && loginForm.email.$touched}">
       <label class="control-label" for="email">Email</label>
       <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
-      <p ng-show="signupForm.email.$invalid && signupForm.email.$touched" class="has-danger">Please enter a valid
+      <p ng-show="loginForm.email.$invalid && loginForm.email.$touched" class="has-danger">Please enter a valid
         email.</p>
       <span ng-show="usernameError" class="has-danger">Sorry, StockChain does not recognise this email address.</span>
       <a ng-show="usernameError" ui-sref="signup">Sign up</a>
@@ -15,7 +15,7 @@
     </div>
 
     <!-- Password -->
-    <div class="form-group" ng-class="{'has-danger': signupForm.password.$invalid && signupForm.password.$touched}">
+    <div class="form-group" ng-class="{'has-danger': loginForm.password.$invalid && loginForm.password.$touched}">
       <label class="control-label" for="password">Password</label>
       <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
              required>

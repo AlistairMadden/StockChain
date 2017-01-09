@@ -5,5 +5,4 @@ certificate.pem
 private.key
 data/
 appDetails.json
-*.sql
 *.log

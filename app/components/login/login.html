@@ -1,13 +1,29 @@
 <div class="container">
+
+  <!-- Login Form -->
   <form name="loginForm" ng-submit="login(credentials)" novalidate>
-    <div class="form-group" ng-class="{'has-danger': loginForm.email.$invalid}">
+
+    <!-- Email -->
+    <div class="form-group" ng-class="{'has-danger': loginForm.email.$invalid && loginForm.email.$touched}">
       <label class="control-label" for="email">Email</label>
-      <input type="email" class="form-control" name="email" ng-model="credentials.username" required id = "email">
+      <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
+      <p ng-show="loginForm.email.$invalid && loginForm.email.$touched" class="has-danger">Please enter a valid
+        email.</p>
+      <span ng-show="usernameError" class="has-danger">Sorry, StockChain does not recognise this email address.</span>
+      <a ng-show="usernameError" ui-sref="signup">Sign up</a>
+      <span ng-show="usernameError" class="has-danger">for an account instead?</span>
     </div>
-    <div class="form-group" ng-class="{'has-danger': loginForm.password.$invalid}">
+
+    <!-- Password -->
+    <div class="form-group" ng-class="{'has-danger': loginForm.password.$invalid && loginForm.password.$touched}">
       <label class="control-label" for="password">Password</label>
-      <input type="password" class="form-control" name="password" ng-model="credentials.password" required id = "password">
+      <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
+             required>
     </div>
+
+    <!-- Submit Button -->
     <button type="submit" class="btn btn-primary">Login</button>
+
   </form>
+
 </div>

@@ -2,12 +2,12 @@
  * Created by Alistair on 15/11/2016.
  */
 
-(function() {
+(function () {
     'use strict';
 
     // Define the component and controller loaded in our test
     angular.module('components.login', [])
-        .controller('loginController', function($scope, $rootScope, AuthService, $state) {
+        .controller('loginController', function ($scope, $rootScope, AuthService, $state) {
 
             $scope.credentials = {
                 username: '',
@@ -24,22 +24,21 @@
              * @param credentials
              */
             $scope.login = function (credentials) {
-              console.log(credentials);
-                AuthService.login(credentials).then(function(res) {
-                    console.log(res.data);
-                    $state.go('profile');
-                }).catch(function (res) {
-                  if(res.data.reason) {
-                    if(res.data.reason === "usernameError") {
-                      console.error(res.data.reason);
-                    }
-                    else if (res.data.reason === "passwordError") {
-                      console.error(res.data.reason);
-                    }
-                  }
-                  console.log('error');
-                  console.log(res.data);
-                });
+                if ($scope.credentials.username && $scope.credentials.password) {
+                    AuthService.login(credentials).then(function (res) {
+                        console.log(res.data);
+                        $state.go('profile');
+                    }).catch(function (res) {
+                        if (res.data.reason) {
+                            if (res.data.reason === "usernameError") {
+                                $scope.usernameError = true;
+                            }
+                            else if (res.data.reason === "passwordError") {
+                                console.error(res.data.reason);
+                            }
+                        }
+                    });
+                }
             }
         })
 })();

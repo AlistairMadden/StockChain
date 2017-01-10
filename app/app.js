@@ -2,7 +2,7 @@
     'use strict';
 
     angular.module('stockChain', ['ui.router', 'components.home', 'api.transactions', 'components.transactions',
-            'components.login', 'components.profile', 'api.AuthService', 'ProfileService'
+            'components.login', 'components.profile', 'components.signup', 'api.AuthService', 'api.ProfileService'
         ])
         .config(function($urlRouterProvider, $stateProvider, $locationProvider, AUTH_EVENTS, $httpProvider) {
 
@@ -31,6 +31,11 @@
                     templateUrl: 'components/login/login.html',
                     controller: 'loginController'
                 })
+                .state('signup', {
+                    url: '/signup',
+                    templateUrl: 'components/signup/signup.html',
+                    controller: 'signupController'
+                })
                 .state('profile', {
                     url: '/profile',
                     templateUrl: 'components/profile/profile.html',
@@ -38,11 +43,9 @@
                     resolve: {
                         profileDetails: function(ProfileService, $state) {
                             return ProfileService.getProfileDetails().then(function(res) {
-                                console.log(res.data);
                                 return res.data;
-                            }).catch(function(res) {
+                            }).catch(function() {
                                 console.log("ERROR");
-                                console.log(res.data);
                                 $state.go('login');
                             });
                         }
@@ -61,6 +64,7 @@
         })
         .controller('stockChain', function($scope) {
 
+            $scope.loggedIn = false;
             $scope.currentUser = null;
 
             $scope.setCurrentUser = function(user) {

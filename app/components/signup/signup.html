@@ -1,0 +1,40 @@
+<div class="container">
+
+  <!-- Signup Form -->
+  <form name="signupForm" ng-submit="signup(credentials)" novalidate>
+
+    <!-- Email -->
+    <div class="form-group" ng-class="{'has-danger': signupForm.email.$invalid && signupForm.email.$touched}">
+      <label class="control-label" for="email">Email</label>
+      <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
+      <p ng-show="signupForm.email.$invalid && signupForm.email.$touched" class="has-danger">Please enter a valid
+        email.</p>
+    </div>
+
+    <!-- Password -->
+    <div class="form-group" ng-class="{'has-danger': signupForm.password.$invalid && signupForm.password.$touched}">
+      <label class="control-label" for="password">Password</label>
+      <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
+             required>
+    </div>
+
+    <!-- Password Check make directive?-->
+    <div class="form-group" ng-class="{'has-danger': (signupForm.passwordCheck.$invalid &&
+        signupForm.passwordCheck.$touched) || ((signupForm.passwordCheck.innerHTML !== signupForm.password.innerHTML) &&
+        signupForm.passwordCheck.$touched)}">
+
+      <label class="control-label" for="confirmPassword">Confirm Password</label>
+      <input id="confirmPassword" type="password" class="form-control" name="passwordCheck"
+             ng-model="credentials.confirmPassword" compare-to="credentials.password" required>
+    </div>
+    <p ng-show="(signupForm.passwordCheck.$invalid &&
+        signupForm.passwordCheck.$touched) || ((signupForm.passwordCheck.innerHTML !== signupForm.password.innerHTML) &&
+        signupForm.passwordCheck.$touched)">The supplied passwords do not match.</p>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-primary">Sign Up</button>
+    <span ng-show="incorrectSubmission" class="has-danger">A field was filled out incorrectly. Please check for errors.</span>
+
+  </form>
+
+</div>

@@ -93,7 +93,7 @@ app.get('/setup', function (req, routeRes) {
                     }
                     else {
                         var userInfo = {account_id: dbRes[0]['account_id'], name: "Alistair Madden"};
-                        sqlConnection.query("INSERT INTO accountInfo SET ?", userInfo, function (err) {
+                        sqlConnection.query("INSERT INTO accountDetails SET ?", userInfo, function (err) {
                             if (err) {
                                 console.log(err);
                                 routeRes.status(500).send({reason: "dbInsertionError"});
@@ -149,6 +149,7 @@ apiRoutes.post('/login', function (req, res) {
                 }
             });
         }
+        // is there a better error code?
         else {
             res.status(401).send({reason: "usernameError"});
         }
@@ -160,7 +161,7 @@ apiRoutes.post('/logout', function(req, res) {
 
 });
 
-apiRoutes.post('/signup', function (routeRes, req) {
+apiRoutes.post('/signup', function (req, routeRes) {
 
     bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
 
@@ -171,28 +172,16 @@ apiRoutes.post('/signup', function (routeRes, req) {
         // insert user (automatic sanitisation)
         sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, dbRes) {
             if(err){
-                routeRes.status(500).send({reason: "dbInsertionError"});
+                // handle case of duplicate email entry
+                if(err.code === "ER_DUP_ENTRY") {
+                    routeRes.status(409).send({reason: err.code});
+                }
+                else {
+                    routeRes.status(500).send({reason: "dbInsertionError"});
+                }
             }
             else {
-                sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = 'alistair.madden@me.com'",
-                    function (err, dbRes) {
-
-                    if (err) {
-                        routeRes.status(500).send({reason: "dbQueryError"});
-                    }
-                    else {
-                        var userInfo = {account_id: dbRes[0]['account_id'], name: req.body.name};
-                        sqlConnection.query("INSERT INTO accountInfo SET ?", userInfo, function (err) {
-                            if (err) {
-                                console.log(err);
-                                routeRes.status(500).send({reason: "dbInsertionError"});
-                            }
-                            else {
-                                routeRes.status(200).send();
-                            }
-                        });
-                    }
-                })
+                routeRes.status(200).send();
             }
         });
     });
@@ -208,7 +197,6 @@ app.use('/api', apiRoutes);
 var protectedRoutes = express.Router();
 
 protectedRoutes.get('/profile', function(req, res) {
-  console.log(req.cookies);
   if (req.cookies['XSRF-TOKEN']) {
       if (req.cookies['XSRF-TOKEN'] === appDetails.secret) {
           if (req.cookies['token']) {

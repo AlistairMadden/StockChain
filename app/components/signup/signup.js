@@ -4,34 +4,60 @@
 
 (function () {
     'use strict';
+
+    var compareTo = function() {
+        return {
+            require: "ngModel",
+            scope: {
+                password: "=compareTo"
+            },
+            link: function(scope, element, attributes, ngModel) {
+
+                ngModel.$validators.compareTo = function(confirmPassword) {
+                    scope.unmatchedPasseords = confirmPassword == scope.password;
+                    return confirmPassword == scope.password;
+                };
+
+                scope.$watch("password", function() {
+                    ngModel.$validate();
+                });
+            }
+        };
+    };
     
     angular.module('components.signup', [])
         .controller('signupController', function ($scope, $rootScope, AuthService, $state) {
 
             $scope.credentials = {
                 username: '',
-                password: ''
+                password: '',
+                confirmPassword: ''
             };
 
-            $scope.name = "";
+            $scope.incorrectSubmission = false;
+            $scope.umatchedPasswords = false;
 
             /**
              * Sign Up function
              *
-             * Takes the credentials stored in the scope and attempts to authorise the user based on the credentials.
-             * If successful, sets the current user and notifies the application of login success, otherwise notifies
-             * the application of login failure.
+             *
              *
              * @param credentials
              */
             $scope.signup = function (credentials) {
-                if ($scope.credentials.username && $scope.credentials.password && $scope.name) {
-                    AuthService.login(credentials).then(function (res) {
-                        $state.go('profile');
-                    }).catch(function (res) {
+                if ($scope.credentials.username && $scope.credentials.password && ($scope.credentials.password ===
+                    $scope.credentials.confirmPassword)) {
+                    AuthService.signup(credentials).then(function () {
+                        console.log("signedup");
+                        // $state.go('profile');
+                    }).catch(function () {
                         console.error("Error creating account");
                     });
                 }
+                else {
+                    $scope.incorrectSubmission = true;
+                }
             }
         })
+        .directive("compareTo", compareTo)
 })();

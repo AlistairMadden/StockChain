@@ -10,8 +10,13 @@
             var authService = {};
 
             authService.login = function (credentials) {
-
                 return $http.post('/api/login', credentials).then(function (res) {
+                    return res;
+                });
+            };
+
+            authService.signup = function (credentials) {
+                return $http.post('/api/signup', credentials).then(function (res) {
                     return res;
                 });
             };

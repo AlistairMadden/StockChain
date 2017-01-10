@@ -135,7 +135,7 @@ apiRoutes.post('/login', function (req, res) {
                 else {
 
                     // If user is found and password is right create a token
-                    var token = jwt.sign(req.body.username, appDetails.secret);
+                    var token = jwt.sign(rows[0], appDetails.secret);
 
                     // Store jwt in a cookie
                     res.cookie('token', token, {
@@ -196,29 +196,75 @@ app.use('/api', apiRoutes);
 
 var protectedRoutes = express.Router();
 
-protectedRoutes.get('/profile', function(req, res) {
-  if (req.cookies['XSRF-TOKEN']) {
-      if (req.cookies['XSRF-TOKEN'] === appDetails.secret) {
-          if (req.cookies['token']) {
-              jwt.verify(req.cookies['token'], appDetails.secret, function(err, decoded) {
-                  if (err) {
-                      res.status(500).send({message: err});
-                  } else {
-                    console.log('JWT Verified');
-                    res.send({decoded: decoded})
-                  }
-              });
-          }
-          else {
-            res.status(401).send({message: "no session cookie"});
-          }
-      }
-      else {
-        res.status(401).send({message: "XSRF-TOKEN does not match"})
-      }
-  } else {
-      res.status(401).send();
-  }
+// I need help from callback hell
+protectedRoutes.get('/profile', function (req, res) {
+    if (req.cookies['XSRF-TOKEN']) {
+        if (req.cookies['XSRF-TOKEN'] === appDetails.secret) {
+            if (req.cookies['token']) {
+                jwt.verify(req.cookies['token'], appDetails.secret, function (err, decoded) {
+                    if (err) {
+                        res.status(500).send({message: err});
+                    }
+                    else {
+                        sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = ?", decoded.username,
+                            function (err, dbRes) {
+                                if (err) {
+                                    res.status(500).send({reason: "dbQueryError"});
+                                }
+                                else {
+                                    var accountId = dbRes[0].account_id;
+                                    sqlConnection.query("SELECT Closing_Balance, Statement_Date FROM accountstatement WHERE account_id = ? ORDER BY Statement_Date DESC LIMIT 1", accountId,
+                                        function (err, dbRes) {
+                                            if (err) {
+                                                res.status(500).send({reason: "dbQueryError"});
+                                            }
+                                            else {
+                                                var lastStatementBalance = 0;
+                                                var lastStatementDate = new Date();
+                                                lastStatementDate.setDate(1);
+                                                lastStatementDate.setTime(0);
+
+                                                if(dbRes[0]) {
+                                                    lastStatementBalance = dbRes[0]['Closing_Balance'];
+                                                    lastStatementDate = dbRes[0]['Statement_Date'];
+                                                }
+
+
+                                                sqlConnection.query("SELECT Transaction_Amount, Transaction_ID FROM accounttransaction WHERE Transaction_DateTime >= ? AND Account_ID = ?", [lastStatementDate, accountId], function (err, dbRes) {
+                                                    if(err) {
+                                                        res.status(500).send({reason: "dbQueryError"});
+                                                    }
+                                                    else {
+
+                                                        for (var i in dbRes) {
+                                                            if(dbRes[i]['Transaction_ID'] == 'C') {
+                                                                lastStatementBalance += dbRes[i]['Transaction_Amount'];
+                                                            }
+                                                            else if (dbRes[i]['Transaction_ID'] == 'D') {
+                                                                lastStatementBalance -= dbRes[i]['Transaction_Amount'];
+                                                            }
+                                                        }
+
+                                                        res.send({username: decoded.username, balance: lastStatementBalance});
+                                                    }
+                                                });
+                                            }
+                                        })
+                                }
+                            });
+                    }
+                });
+            }
+            else {
+                res.status(401).send({message: "no session cookie"});
+            }
+        }
+        else {
+            res.status(401).send({message: "XSRF-TOKEN does not match"})
+        }
+    } else {
+        res.status(401).send();
+    }
 });
 
 app.use('/user', protectedRoutes);

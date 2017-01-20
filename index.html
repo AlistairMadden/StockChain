@@ -22,8 +22,6 @@
 
   <!--our angular app-->
   <script src="components/home/home.js"></script>
-  <script src="services/transactions/transactions.js"></script>
-  <script src="components/transactions/transactions.js"></script>
   <script src="services/AuthService/AuthService.js"></script>
   <script src="components/login/login.js"></script>
   <script src="services/ProfileService/ProfileService.js"></script>
@@ -33,13 +31,15 @@
 </head>
 
 <body ng-app="stockChain" ng-controller="stockChain">
-<nav class="navbar navbar-default">
+<nav id="main-navbar" class="navbar navbar-default">
   <div class="container">
     <div class="navbar-header">
       <a class="navbar-brand">StockChain</a>
-      <form class="form-inline float-xs-right" ng-show="!loggedIn">
-        <button class="btn btn-outline-success float-right" ui-sref="login">Login</button>
-      </form>
+      <div class="account-ctrl-btn-div">
+        <button id="login-btn" class="btn btn-outline-success" ui-sref="login" ng-show="!loginInfo.loggedIn">Log in</button>
+        <button id="signin-btn" class="btn btn-outline-primary" ui-sref="signup" ng-show="!loginInfo.loggedIn">Sign up</button>
+        <button id="logout-btn" class="btn btn-outline-primary" ui-sref="logout" ng-show="loginInfo.loggedIn">Log out</button>
+      </div>
     </div>
   </div>
 </nav>

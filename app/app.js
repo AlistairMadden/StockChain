@@ -1,10 +1,10 @@
-(function() {
+(function () {
     'use strict';
 
-    angular.module('stockChain', ['ui.router', 'components.home', 'api.transactions', 'components.transactions',
-            'components.login', 'components.profile', 'components.signup', 'api.AuthService', 'api.ProfileService'
-        ])
-        .config(function($urlRouterProvider, $stateProvider, $locationProvider, AUTH_EVENTS, $httpProvider) {
+    angular.module('stockChain', ['ui.router', 'components.home', 'components.login', 'components.profile',
+        'components.signup', 'api.AuthService', 'api.ProfileService'
+    ])
+        .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
 
             $httpProvider.defaults.withCredentials = true;
 
@@ -15,16 +15,6 @@
                     url: '/',
                     templateUrl: 'components/home/home.html',
                     controller: 'homeController'
-                })
-                .state('transactions', {
-                    url: '/transactions',
-                    templateUrl: 'components/transactions/transactions.html',
-                    controller: 'transactionsController',
-                    resolve: {
-                        user: function(AuthService) {
-                            return AuthService.isAuthenticated();
-                        }
-                    }
                 })
                 .state('login', {
                     url: '/login',
@@ -41,34 +31,33 @@
                     templateUrl: 'components/profile/profile.html',
                     controller: 'profileController',
                     resolve: {
-                        profileDetails: function(ProfileService, $state) {
-                            return ProfileService.getProfileDetails().then(function(res) {
+                        profileDetails: function (ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function (res) {
                                 return res.data;
-                            }).catch(function() {
-                                console.log("ERROR");
+                            }).catch(function () {
                                 $state.go('login');
                             });
                         }
+                    }
+                })
+                .state('logout', {
+                    controller: function ($scope, $state, AuthService) {
+                        $scope.loginInfo.loggedIn = false;
+                        $scope.loginInfo.currentUser = null;
+
+                        AuthService.logout().then(function () {
+                            $state.go('home');
+                        });
                     }
                 });
 
             $urlRouterProvider.otherwise('/404');
         })
-        .constant('AUTH_EVENTS', {
-            loginSuccess: 'auth-login-success',
-            loginFailed: 'auth-login-failed',
-            logoutSuccess: 'auth-logout-success',
-            sessionTimeout: 'auth-session-timeout',
-            notAuthenticated: 'auth-not-authenticated',
-            notAuthorized: 'auth-not-authorized'
-        })
-        .controller('stockChain', function($scope) {
+        .controller('stockChain', function ($scope) {
 
-            $scope.loggedIn = false;
-            $scope.currentUser = null;
+            $scope.loginInfo = {};
+            $scope.loginInfo.loggedIn = false;
+            $scope.loginInfo.currentUser = null;
 
-            $scope.setCurrentUser = function(user) {
-                $scope.currentUser = user;
-            };
         });
 })();

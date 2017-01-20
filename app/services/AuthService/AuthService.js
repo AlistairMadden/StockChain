@@ -15,6 +15,12 @@
                 });
             };
 
+            authService.logout = function () {
+                return $http.get('/api/logout').then(function (res) {
+                    return res;
+                });
+            };
+
             authService.signup = function (credentials) {
                 return $http.post('/api/signup', credentials).then(function (res) {
                     return res;

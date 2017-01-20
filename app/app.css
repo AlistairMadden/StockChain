@@ -1,37 +1,45 @@
 body {
-  background-color: #eee;
+  background-color: #eeeeee;
 }
 
-.form-signin {
-  max-width: 330px;
-  padding: 15px;
+/* Navbar */
+.main-navbar {
+  background-color: #eeeeee;
+}
+
+.account-ctrl-btn-div {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-end;
+}
+
+#signin-btn {
+  margin-left: 0.5rem;
+}
+
+/* Log in and sign up */
+#login-container, #signup-container {
+  max-width: 500px;
+  margin-top: 3rem;
+}
+
+.form-warning {
+  margin-top: 0.5rem;
+}
+
+.submit-warning {
+  margin-bottom: 1.5rem;
+}
+
+.form-control {
+  line-height: 1;
+}
+
+.submit-btn {
+  display: flex;
   margin: 0 auto;
 }
-.form-signin .form-signin-heading,
-.form-signin .checkbox {
-  margin-bottom: 10px;
-}
-.form-signin .checkbox {
-  font-weight: normal;
-}
-.form-signin .form-control {
-  position: relative;
-  height: auto;
-  -webkit-box-sizing: border-box;
-          box-sizing: border-box;
-  padding: 10px;
-  font-size: 16px;
-}
-.form-signin .form-control:focus {
-  z-index: 2;
-}
-.form-signin input[type="email"] {
-  margin-bottom: -1px;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-.form-signin input[type="password"] {
-  margin-bottom: 10px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+
+.last-form-group {
+  margin-bottom: 1.5rem;
 }

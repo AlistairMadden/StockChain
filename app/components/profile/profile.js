@@ -5,5 +5,6 @@
     angular.module('components.profile', [])
         .controller('profileController', function ($scope, profileDetails) {
             $scope.profileDetails = profileDetails;
+            $scope.loginInfo.loggedIn = true;
         })
 })();

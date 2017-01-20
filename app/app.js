@@ -1,10 +1,10 @@
-(function() {
+(function () {
     'use strict';
 
-    angular.module('stockChain', ['ui.router', 'components.home', 'api.transactions', 'components.transactions',
-            'components.login', 'components.profile', 'components.signup', 'api.AuthService', 'api.ProfileService'
-        ])
-        .config(function($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
+    angular.module('stockChain', ['ui.router', 'components.home', 'components.login', 'components.profile',
+        'components.signup', 'api.AuthService', 'api.ProfileService'
+    ])
+        .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
 
             $httpProvider.defaults.withCredentials = true;
 
@@ -15,16 +15,6 @@
                     url: '/',
                     templateUrl: 'components/home/home.html',
                     controller: 'homeController'
-                })
-                .state('transactions', {
-                    url: '/transactions',
-                    templateUrl: 'components/transactions/transactions.html',
-                    controller: 'transactionsController',
-                    resolve: {
-                        user: function(AuthService) {
-                            return AuthService.isAuthenticated();
-                        }
-                    }
                 })
                 .state('login', {
                     url: '/login',

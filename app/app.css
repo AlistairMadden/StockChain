@@ -17,6 +17,10 @@ body {
   margin-top: 0.5rem;
 }
 
+.submit-warning {
+  margin-bottom: 1.5rem;
+}
+
 .form-control {
   line-height: 1;
 }

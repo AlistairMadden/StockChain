@@ -25,17 +25,11 @@
              */
             $scope.login = function (credentials) {
                 if ($scope.credentials.username && $scope.credentials.password) {
-                    AuthService.login(credentials).then(function (res) {
-                        console.log(res.data);
+                    AuthService.login(credentials).then(function () {
                         $state.go('profile');
                     }).catch(function (res) {
-                        if (res.data.reason) {
-                            if (res.data.reason === "usernameError") {
-                                $scope.usernameError = true;
-                            }
-                            else if (res.data.reason === "passwordError") {
-                                console.error(res.data.reason);
-                            }
+                        if(res.status == 401) {
+                            $scope.unrecognisedCredentials = true;
                         }
                     });
                 }

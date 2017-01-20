@@ -1,30 +1,38 @@
 <div id="login-container" class="container">
 
-    <!-- Login Form -->
-    <form name="loginForm" ng-submit="login(credentials)" novalidate>
+  <!-- Login Form -->
+  <form name="transactionForm" ng-submit="login(credentials)" novalidate>
 
-        <!-- Email -->
-        <div class="form-group" ng-class="{'has-danger': loginForm.email.$invalid && loginForm.email.$touched}">
-            <label class="control-label" for="email">Email</label>
-            <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
-            <p ng-show="loginForm.email.$invalid && loginForm.email.$touched" class="has-danger form-warning">Please
-                enter a valid
-                email.</p>
-            <p ng-show="usernameError" class="has-danger form-warning">Sorry, StockChain does not recognise this email
-                address. <a ng-show="usernameError" ui-sref="signup" class="form-warning">Sign up</a> for an account
-                instead?</p>
-        </div>
+    <!-- Email -->
+    <div class="form-group" ng-class="{'has-danger': transactionForm.email.$invalid && transactionForm.email.$touched &&
+      !transactionForm.email.focus}">
+      <label class="control-label" for="email">Email</label>
+      <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username"
+             ng-focus="transactionForm.email.focus=true" ng-blur="transactionForm.email.focus=false" required>
 
-        <!-- Password -->
-        <div class="form-group last-form-group" ng-class="{'has-danger': loginForm.password.$invalid && loginForm.password.$touched}">
-            <label class="control-label" for="password">Password</label>
-            <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
-                   required>
-        </div>
+      <p ng-show="transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus"
+         class="has-danger form-warning">Please enter a valid email.</p>
+    </div>
 
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-primary submit-btn">Login</button>
+    <!-- Password -->
+    <div class="form-group last-form-group" ng-class="{'has-danger': transactionForm.password.$invalid &&
+      transactionForm.password.$touched && !transactionForm.password.focus}">
+      <label class="control-label" for="password">Password</label>
+      <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
+             ng-focus="transactionForm.password.focus=true" ng-blur="transactionForm.password.focus=false" required>
 
-    </form>
+      <p ng-show="transactionForm.password.$invalid && transactionForm.password.$touched &&
+        !transactionForm.password.focus" class="has-danger form-warning">Please enter a password.</p>
+    </div>
+
+    <p ng-show="unrecognisedCredentials" class="has-danger submit-warning">StockChain doesn't recognise this email
+      address and password combination.
+      <a ng-show="unrecognisedCredentials" ui-sref="signup" class="form-warning">Sign up</a>
+      for an account instead?</p>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-primary submit-btn">Log in</button>
+
+  </form>
 
 </div>

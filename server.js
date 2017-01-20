@@ -71,6 +71,24 @@ app.use(morgan('dev'));
 // Use cookieParser for handling of cookies
 app.use(cookieParser());
 
+// Use express-session for user login sessions
+app.use(session({
+    secret: appDetails.secret,
+    name: 'sessionId', // give the cookie a different name from the standard
+    resave: false, // don't save session if unmodified
+    saveUninitialized: false, // don't create session until something stored
+    cookie: {secure: true} // https
+}));
+
+function restrict(req, res, next) {
+    if (req.session.user) {
+        next();
+    } else {
+        req.session.error = 'Access denied!';
+        res.status(401).send()
+    }
+}
+
 // TESTING ROUTE. Sort callback hell later. Delete later.
 app.get('/setup', function (req, routeRes) {
 
@@ -118,47 +136,70 @@ var apiRoutes = express.Router();
 
 // log in route
 apiRoutes.post('/login', function (req, res) {
-
-    sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
-        if (err) {
-            console.log(req.body.username);
-            console.log(err);
-            res.status(500).send();
-        }
-        else if (!(rows === undefined || rows.length === 0)) {
-
-            bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
-
-                if (matchingHash !== true) {
-                    res.status(401).send({reason: "passwordError"});
-                }
-                else {
-
-                    // If user is found and password is right create a token
-                    var token = jwt.sign(rows[0], appDetails.secret);
-
-                    // Store jwt in a cookie
-                    res.cookie('token', token, {
-                        httpOnly: true,
-                        secure: true
-                    });
-
-                    res.cookie('XSRF-TOKEN', appDetails.secret);
-
-                    res.status(200).send({message: 'Successfully logged in.'});
-                }
-            });
-        }
-        // is there a better error code?
-        else {
-            res.status(401).send({reason: "usernameError"});
-        }
-    });
+    authenticate(req, res, handleAuthenticationResponse);
 });
 
-// log out route
-apiRoutes.post('/logout', function(req, res) {
+/**
+ * Authentication function
+ *
+ * Checks the db for matching username and hash combination, calls the supplied callback with appropriate arguments.
+ *
+ * @param req - the request received by the web server
+ * @param res - the response to be sent by the web server
+ * @param callback - function(err, user) -> user is the email of the authenticated user
+ */
+function authenticate(req, res, callback) {
 
+    // Is username in DB?
+    sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
+        if (err) {
+            // DB error
+            return callback(err, null, req, res);
+        }
+        else if (!(rows === undefined || rows.length === 0)) {
+            // Hashed passwords match?
+            return bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
+                if (err) {
+                    return callback(err, null, req, res);
+                }
+                else if (matchingHash) {
+                    return callback(null, req.body.username, req, res);
+                }
+                else {
+                    err = {};
+                    err.statusCode = 401;
+                    return callback(err, null, req, res);
+                }
+            })
+        }
+        else {
+            err = {};
+            err.statusCode = 401;
+            return callback(err, null, req, res);
+        }
+    })
+}
+
+function handleAuthenticationResponse(err, user, req, res) {
+    if (err) {
+        res.status(err.statusCode).send();
+    }
+    else if (user) {
+        req.session.regenerate(function () {
+            console.log("Got here");
+            req.session.user = user;
+            res.status(200).send();
+        });
+    }
+}
+
+// log out route
+apiRoutes.get('/logout', function(req, res) {
+    // destroy the user's session to log them out
+    // will be re-created next request
+    req.session.destroy(function(){
+        res.status(200).send();
+    });
 });
 
 apiRoutes.post('/signup', function (req, routeRes) {
@@ -181,7 +222,7 @@ apiRoutes.post('/signup', function (req, routeRes) {
                 }
             }
             else {
-                routeRes.status(200).send();
+                authenticate(req, routeRes, handleAuthenticationResponse);
             }
         });
     });
@@ -197,74 +238,53 @@ app.use('/api', apiRoutes);
 var protectedRoutes = express.Router();
 
 // I need help from callback hell
-protectedRoutes.get('/profile', function (req, res) {
-    if (req.cookies['XSRF-TOKEN']) {
-        if (req.cookies['XSRF-TOKEN'] === appDetails.secret) {
-            if (req.cookies['token']) {
-                jwt.verify(req.cookies['token'], appDetails.secret, function (err, decoded) {
-                    if (err) {
-                        res.status(500).send({message: err});
-                    }
-                    else {
-                        sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = ?", decoded.username,
-                            function (err, dbRes) {
+protectedRoutes.get('/profile', restrict, function (req, res) {
+    sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = ?", req.session.user,
+        function (err, dbRes) {
+            if (err) {
+                res.status(500).send({reason: "dbQueryError"});
+            }
+            else {
+                var accountId = dbRes[0].account_id;
+                sqlConnection.query("SELECT Closing_Balance, Statement_Date FROM accountstatement WHERE account_id = ? ORDER BY Statement_Date DESC LIMIT 1", accountId,
+                    function (err, dbRes) {
+                        if (err) {
+                            res.status(500).send({reason: "dbQueryError"});
+                        }
+                        else {
+                            var lastStatementBalance = 0;
+                            var lastStatementDate = new Date();
+                            lastStatementDate.setDate(1);
+                            lastStatementDate.setTime(0);
+
+                            if (dbRes[0]) {
+                                lastStatementBalance = dbRes[0]['Closing_Balance'];
+                                lastStatementDate = dbRes[0]['Statement_Date'];
+                            }
+
+
+                            sqlConnection.query("SELECT Transaction_Amount, Transaction_ID FROM accounttransaction WHERE Transaction_DateTime >= ? AND Account_ID = ?", [lastStatementDate, accountId], function (err, dbRes) {
                                 if (err) {
                                     res.status(500).send({reason: "dbQueryError"});
                                 }
                                 else {
-                                    var accountId = dbRes[0].account_id;
-                                    sqlConnection.query("SELECT Closing_Balance, Statement_Date FROM accountstatement WHERE account_id = ? ORDER BY Statement_Date DESC LIMIT 1", accountId,
-                                        function (err, dbRes) {
-                                            if (err) {
-                                                res.status(500).send({reason: "dbQueryError"});
-                                            }
-                                            else {
-                                                var lastStatementBalance = 0;
-                                                var lastStatementDate = new Date();
-                                                lastStatementDate.setDate(1);
-                                                lastStatementDate.setTime(0);
 
-                                                if(dbRes[0]) {
-                                                    lastStatementBalance = dbRes[0]['Closing_Balance'];
-                                                    lastStatementDate = dbRes[0]['Statement_Date'];
-                                                }
+                                    for (var i in dbRes) {
+                                        if (dbRes[i]['Transaction_ID'] == 'C') {
+                                            lastStatementBalance += dbRes[i]['Transaction_Amount'];
+                                        }
+                                        else if (dbRes[i]['Transaction_ID'] == 'D') {
+                                            lastStatementBalance -= dbRes[i]['Transaction_Amount'];
+                                        }
+                                    }
 
-
-                                                sqlConnection.query("SELECT Transaction_Amount, Transaction_ID FROM accounttransaction WHERE Transaction_DateTime >= ? AND Account_ID = ?", [lastStatementDate, accountId], function (err, dbRes) {
-                                                    if(err) {
-                                                        res.status(500).send({reason: "dbQueryError"});
-                                                    }
-                                                    else {
-
-                                                        for (var i in dbRes) {
-                                                            if(dbRes[i]['Transaction_ID'] == 'C') {
-                                                                lastStatementBalance += dbRes[i]['Transaction_Amount'];
-                                                            }
-                                                            else if (dbRes[i]['Transaction_ID'] == 'D') {
-                                                                lastStatementBalance -= dbRes[i]['Transaction_Amount'];
-                                                            }
-                                                        }
-
-                                                        res.send({username: decoded.username, balance: lastStatementBalance});
-                                                    }
-                                                });
-                                            }
-                                        })
+                                    res.send({username: req.session.user, balance: lastStatementBalance});
                                 }
                             });
-                    }
-                });
+                        }
+                    })
             }
-            else {
-                res.status(401).send({message: "no session cookie"});
-            }
-        }
-        else {
-            res.status(401).send({message: "XSRF-TOKEN does not match"})
-        }
-    } else {
-        res.status(401).send();
-    }
+        });
 });
 
 app.use('/user', protectedRoutes);

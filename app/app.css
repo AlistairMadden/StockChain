@@ -7,6 +7,16 @@ body {
   background-color: #eeeeee;
 }
 
+.account-ctrl-btn-div {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-end;
+}
+
+#signin-btn {
+  margin-left: 0.5rem;
+}
+
 /* Log in and sign up */
 #login-container, #signup-container {
   max-width: 500px;

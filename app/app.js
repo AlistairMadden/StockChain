@@ -31,22 +31,33 @@
                     templateUrl: 'components/profile/profile.html',
                     controller: 'profileController',
                     resolve: {
-                        profileDetails: function(ProfileService, $state) {
-                            return ProfileService.getProfileDetails().then(function(res) {
+                        profileDetails: function (ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function (res) {
                                 return res.data;
-                            }).catch(function() {
+                            }).catch(function () {
                                 $state.go('login');
                             });
                         }
+                    }
+                })
+                .state('logout', {
+                    controller: function ($scope, $state, AuthService) {
+                        $scope.loginInfo.loggedIn = false;
+                        $scope.loginInfo.currentUser = null;
+
+                        AuthService.logout().then(function () {
+                            $state.go('home');
+                        });
                     }
                 });
 
             $urlRouterProvider.otherwise('/404');
         })
-        .controller('stockChain', function($scope) {
+        .controller('stockChain', function ($scope) {
 
-            $scope.loggedIn = false;
-            $scope.currentUser = null;
+            $scope.loginInfo = {};
+            $scope.loginInfo.loggedIn = false;
+            $scope.loginInfo.currentUser = null;
 
         });
 })();

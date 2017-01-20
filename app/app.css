@@ -43,3 +43,8 @@ body {
 .last-form-group {
   margin-bottom: 1.5rem;
 }
+
+/* Profile */
+.profile-container {
+  margin-top: 1rem;
+}

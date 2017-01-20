@@ -49,7 +49,7 @@
                     $scope.credentials.confirmPassword)) {
                     AuthService.signup(credentials).then(function () {
                         console.log("signedup");
-                        // $state.go('profile');
+                        $state.go('profile');
                     }).catch(function () {
                         console.error("Error creating account");
                     });

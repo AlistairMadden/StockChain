@@ -8,7 +8,6 @@ var express = require('express'),
     path = require('path'),
     fs = require('fs'),
     bcrypt = require('bcrypt'),
-    jwt = require('jsonwebtoken'),
     appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8'));
 
 const saltRounds = 10;
@@ -228,7 +227,74 @@ apiRoutes.post('/signup', function (req, routeRes) {
     });
 });
 
-// apply the routes to our application with the prefix /api
+/**
+ * Route used to make a transaction between user accounts
+ *
+ *
+ */
+apiRoutes.post("/makeTransaction", restrict, function (req, res) {
+
+    // Nothing can be done if we don't have the data/it isn't correct
+    if(!req.body.username) {
+        return res.status(400).send({reason: "No recipient email given"});
+    }
+    else if (!req.body.amount) {
+        return res.status(400).send({reason: "No amount specified"});
+    }
+    else if(!(typeof(req.body.amount) === "number")) {
+        console.log(typeof(req.body.amount));
+        return res.status(400).send({reason: "Amount given is not an integer value"});
+    }
+    else if(req.body.amount % 1 !== 0) {
+        return res.status(400).send({reason: "Amount given is not an integer value"});
+    }
+    else if(!(typeof(req.body.username) === "string")) {
+        return res.status(400).send({reason: "Username given is not a string"});
+    }
+
+    // Semantic problems
+    if (req.body.username === req.session.user) {
+        return res.status(400).send({reason: "Recipient's username is same as sender's username"});
+    }
+
+    // Check recipient is a valid user
+    sqlConnection.query("SELECT username FROM accountauth WHERE username = ?", req.body.username, function (err, rows) {
+        if (err) {
+            console.log(err);
+            return res.status(500).send({reason: "DB query error"});
+        }
+
+        if(rows.length === 0) {
+            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "INV_USER"});
+        }
+
+        // Look up current balance in session store (but for now, just look up direct from sql db)
+        sqlConnection.query("CALL stockchain.getAccountStatement(?)", req.session.user, function(err, rows) {
+            if (err) {
+                console.error(err);
+                return res.status(500).send({reason: "Error fetching account statement from DB"});
+            }
+
+            // Not enough money in account
+            if (rows[0][0].balance < req.body.amount) {
+                return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
+                req.body.username});
+            }
+
+            sqlConnection.query("CALL stockchain.makeTransaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).send({reason: "Error writing transaction to DB"});
+                }
+            });
+
+            res.status(200).send();
+
+        });
+    });
+});
+
+// apply the routes to the web server with the prefix /api
 app.use('/api', apiRoutes);
 
 /*

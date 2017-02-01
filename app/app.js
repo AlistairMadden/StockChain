@@ -2,7 +2,7 @@
     'use strict';
 
     angular.module('stockChain', ['ui.router', 'components.home', 'components.login', 'components.profile',
-        'components.signup', 'api.AuthService', 'api.ProfileService'
+        'components.signup', 'api.AuthService', 'api.ProfileService', 'api.TransactionService'
     ])
         .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
 

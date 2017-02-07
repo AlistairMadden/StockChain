@@ -47,4 +47,32 @@ body {
 /* Profile */
 .profile-container {
   margin-top: 1rem;
+.amount-form-group {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.currency-dropdown {
+  height: auto;
+  border-right: 0px;
+  border-bottom-right-radius: 0px;
+  border-top-right-radius: 0px;
+  max-width: 33.3%;
+}
+
+#transaction-amount {
+  flex-basis: 20%;
+  flex-grow: 1;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+}
+
+.amount-label {
+  flex-basis: 100%;
+}
+
+.no-amount-warning {
+  flex-basis: 100%;
+}
+
 }

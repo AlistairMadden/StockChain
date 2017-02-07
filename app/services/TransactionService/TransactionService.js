@@ -9,10 +9,19 @@
         .factory('TransactionService', function($http) {
             var transactionService = {};
 
-            transactionService.makeTransaction = function(transactionDetails) {
+            function makeTransaction(transactionDetails) {
                 return $http.post('/api/makeTransaction', transactionDetails).then(function(res) {
                     return res;
                 });
+            }
+
+            transactionService.makeTransaction = function(transactionDetails) {
+                return makeTransaction(transactionDetails);
+            };
+
+            transactionService.makeTransactionCurrency = function (transactionDetails, currency) {
+                transactionDetails.currency = currency;
+                return makeTransaction(transactionDetails);
             };
 
             return transactionService;

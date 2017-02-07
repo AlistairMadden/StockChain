@@ -366,6 +366,7 @@ protectedRoutes.get('/profile', restrict, function (req, res) {
                                     }
 
                                     res.send({username: req.session.user, balance: lastStatementBalance});
+                                    res.send({username: req.session.user, balance: lastStatementBalance, FTSEQuote: FTSEQuote});
                                 }
                             });
                         }

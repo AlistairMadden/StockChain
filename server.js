@@ -9,8 +9,26 @@ var express = require('express'),
     fs = require('fs'),
     bcrypt = require('bcrypt'),
     appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8'));
+    http = require('http');
 
 const saltRounds = 10;
+var FTSEQuote;
+
+http.get({host:"query.yahooapis.com", path:"/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(\"^FTSE\")&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback="}, function(response) {
+    var str = '';
+    response.setEncoding('utf8');
+
+    //another chunk of data has been received, so append it to `str`
+    response.on('data', function (chunk) {
+        str += chunk;
+    });
+
+    //the whole response has been received
+    response.on('end', function () {
+        var parsed = JSON.parse(str);
+        FTSEQuote = parsed.query.results.quote.Open;
+    });
+}).end();
 
 /*
   DB Setup
@@ -242,11 +260,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
         return res.status(400).send({reason: "No amount specified"});
     }
     else if(!(typeof(req.body.amount) === "number")) {
-        console.log(typeof(req.body.amount));
-        return res.status(400).send({reason: "Amount given is not an integer value"});
-    }
-    else if(req.body.amount % 1 !== 0) {
-        return res.status(400).send({reason: "Amount given is not an integer value"});
+        return res.status(400).send({reason: "Amount given is not a number"});
     }
     else if(!(typeof(req.body.username) === "string")) {
         return res.status(400).send({reason: "Username given is not a string"});
@@ -275,6 +289,14 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
                 return res.status(500).send({reason: "Error fetching account statement from DB"});
             }
 
+            // Make GBP conversion
+            if(req.body.currency) {
+                req.body.amount = Math.round(req.body.amount / (FTSEQuote/1000));
+            }
+            else if(req.body.amount % 1 !== 0) {
+                return res.status(400).send({reason: "Amount given is not an integer value"});
+            }
+
             // Not enough money in account
             if (rows[0][0].balance < req.body.amount) {
                 return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
@@ -286,10 +308,9 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
                     console.error(err);
                     return res.status(500).send({reason: "Error writing transaction to DB"});
                 }
+
+                res.status(200).send({balance: rows[0][0].balance - req.body.amount});
             });
-
-            res.status(200).send();
-
         });
     });
 });

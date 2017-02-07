@@ -364,8 +364,7 @@ protectedRoutes.get('/profile', restrict, function (req, res) {
                                             lastStatementBalance -= dbRes[i]['Transaction_Amount'];
                                         }
                                     }
-
-                                    res.send({username: req.session.user, balance: lastStatementBalance});
+                                    
                                     res.send({username: req.session.user, balance: lastStatementBalance, FTSEQuote: FTSEQuote});
                                 }
                             });

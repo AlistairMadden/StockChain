@@ -2,11 +2,10 @@
     'use strict';
 
     // Define the component and controller loaded in our test
-    angular.module('components.profile', [])
-        .controller('profileController', function ($scope, profileDetails, TransactionService) {
+    angular.module('components.overview', [])
+        .controller('overviewController', function ($scope, profileDetails, TransactionService) {
             $scope.profileDetails = profileDetails;
             $scope.currencyEquivalent = (profileDetails.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
-            $scope.loginInfo.loggedIn = true;
 
             $scope.transactionDetails = {};
 
@@ -29,6 +28,8 @@
                                 TransactionService.makeTransactionCurrency(transactionDetails, $scope.currency).then(function (transactionServiceRes) {
                                     if (transactionServiceRes.status === 200) {
                                         $scope.submitMessages.transactionSuccess = true;
+                                        $scope.profileDetails.balance = transactionServiceRes.data.balance;
+                                        $scope.currencyEquivalent = (transactionServiceRes.data.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
                                     }
                                 }).catch(function (err) {
                                     if (err.data.errCode === "INV_USER") {
@@ -41,6 +42,8 @@
                             TransactionService.makeTransaction(transactionDetails).then(function (transactionServiceRes) {
                                 if (transactionServiceRes.status === 200) {
                                     $scope.submitMessages.transactionSuccess = true;
+                                    $scope.profileDetails.balance = transactionServiceRes.data.balance;
+                                    $scope.currencyEquivalent = (transactionServiceRes.data.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
                                 }
                             }).catch(function (err) {
                                 if (err.data.errCode === "INV_USER") {

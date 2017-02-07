@@ -1,1 +1,17 @@
-<h1>Totally an awesome webapp</h1>
+<nav id="main-navbar" class="navbar navbar-default">
+  <div class="navbar-header">
+    <a id="navbar-brand" class="navbar-brand">StockChain</a>
+    <nav class="nav nav-masthead">
+      <a class="nav-link active" href="/">About</a>
+    </nav>
+    <div class="account-ctrl-btn-div">
+      <button id="login-btn" class="btn btn-outline-success" ui-sref="website.login">
+        Log in
+      </button>
+      <button id="signin-btn" class="btn btn-outline-primary" ui-sref="website.signup">
+        Sign up
+      </button>
+    </div>
+  </div>
+</nav>
+<ui-view></ui-view>

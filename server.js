@@ -8,7 +8,8 @@ var express = require('express'),
     path = require('path'),
     fs = require('fs'),
     bcrypt = require('bcrypt'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8'));
+    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
+    schedule = require("node-schedule"),
     http = require('http');
 
 const saltRounds = 10;
@@ -48,6 +49,15 @@ sqlConnection.connect(function(err){
     }
 });
 
+/*
+  Schedule a job to run and update the account statements every first of the month
+ */
+var rule = new schedule.RecurrenceRule();
+rule.day = 1;
+
+var j = schedule.scheduleJob(rule, function(){
+
+});
 
 /*
   HTTPS Setup
@@ -105,45 +115,6 @@ function restrict(req, res, next) {
         res.status(401).send()
     }
 }
-
-// TESTING ROUTE. Sort callback hell later. Delete later.
-app.get('/setup', function (req, routeRes) {
-
-    // simple user's password is password
-    bcrypt.hash('password', saltRounds, function(err, hash) {
-
-        // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
-        // login
-        var user = {username: "alistair.madden@me.com", password: hash};
-
-        // insert user (automatic sanitisation)
-        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, dbRes) {
-            if(err){
-                routeRes.status(500).send({reason: "dbInsertionError"});
-            }
-            else {
-                sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = 'alistair.madden@me.com'", function (err, dbRes) {
-                    if (err) {
-                        routeRes.status(500).send({reason: "dbQueryError"});
-                    }
-                    else {
-                        var userInfo = {account_id: dbRes[0]['account_id'], name: "Alistair Madden"};
-                        sqlConnection.query("INSERT INTO accountDetails SET ?", userInfo, function (err) {
-                            if (err) {
-                                console.log(err);
-                                routeRes.status(500).send({reason: "dbInsertionError"});
-                            }
-                            else {
-                                routeRes.status(200).send();
-                            }
-                        });
-                    }
-                })
-            }
-        });
-    });
-});
-
 
 /*
   API routes
@@ -203,7 +174,6 @@ function handleAuthenticationResponse(err, user, req, res) {
     }
     else if (user) {
         req.session.regenerate(function () {
-            console.log("Got here");
             req.session.user = user;
             res.status(200).send();
         });
@@ -313,6 +283,20 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
             });
         });
     });
+});
+
+/**
+ * Gets the logged in user's transactions
+ */
+apiRoutes.get("/getTransactions", restrict, function (req, res) {
+    sqlConnection.query("call stockchain.getAccountTransactions(?)", req.session.user, function (err, dbResponse) {
+        if (err) {
+            console.error(err);
+            return res.status(500).send({reason: "Error fetching transactions from DB"});
+        }
+
+        res.status(200).send(dbResponse[0]);
+    })
 });
 
 // apply the routes to the web server with the prefix /api

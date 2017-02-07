@@ -26,7 +26,7 @@
             $scope.login = function (credentials) {
                 if ($scope.credentials.username && $scope.credentials.password) {
                     AuthService.login(credentials).then(function () {
-                        $state.go('profile');
+                        $state.go('account.overview');
                     }).catch(function (res) {
                         if(res.status == 401) {
                             $scope.unrecognisedCredentials = true;

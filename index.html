@@ -22,12 +22,13 @@
 
   <!--our angular app-->
   <script src="components/home/home.js"></script>
+  <script src="components/login/login.js"></script>
+  <script src="components/signup/signup.js"></script>
+  <script src="components/account/account.js"></script>
+  <script src="components/account/overview.js"></script>
   <script src="services/AuthService/AuthService.js"></script>
   <script src="services/ProfileService/ProfileService.js"></script>
   <script src="services/TransactionService/TransactionService.js"></script>
-  <script src="components/login/login.js"></script>
-  <script src="components/profile/profile.js"></script>
-  <script src="components/signup/signup.js"></script>
   <script src="app.js"></script>
 
   <script src="jquery/dist/jquery.min.js"></script>
@@ -35,19 +36,6 @@
 </head>
 
 <body ng-app="stockChain" ng-controller="stockChain">
-<nav id="main-navbar" class="navbar navbar-default">
-  <div class="container">
-    <div class="navbar-header">
-      <a class="navbar-brand">StockChain</a>
-      <div class="account-ctrl-btn-div">
-        <button id="login-btn" class="btn btn-outline-success" ui-sref="login" ng-show="!loginInfo.loggedIn">Log in</button>
-        <button id="signin-btn" class="btn btn-outline-primary" ui-sref="signup" ng-show="!loginInfo.loggedIn">Sign up</button>
-        <button id="logout-btn" class="btn btn-outline-primary" ui-sref="logout" ng-show="loginInfo.loggedIn">Log out</button>
-      </div>
-    </div>
-  </div>
-</nav>
-
-<div ui-view></div>
+  <div ui-view></div>
 </body>
 </html>

@@ -47,6 +47,8 @@ body {
 /* Profile */
 .profile-container {
   margin-top: 1rem;
+}
+
 .amount-form-group {
   display: flex;
   flex-wrap: wrap;
@@ -73,6 +75,4 @@ body {
 
 .no-amount-warning {
   flex-basis: 100%;
-}
-
 }

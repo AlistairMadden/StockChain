@@ -1,3 +1,5 @@
+drop procedure updateaccountstatements;
+
 DELIMITER $$
 create procedure updateaccountstatements(IN NewStatementDate date, PreviousStatementDate date) 
 BEGIN

@@ -3,9 +3,10 @@
 
     // Define the component and controller loaded in our test
     angular.module('components.overview', [])
-        .controller('overviewController', function ($scope, profileDetails, TransactionService) {
+        .controller('overviewController', function ($scope, profileDetails, TransactionService, accountBalance) {
             $scope.profileDetails = profileDetails;
-            $scope.currencyEquivalent = (profileDetails.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
+            $scope.currencyBalance = Math.trunc(accountBalance.currency.balance * 100)/ 100;
+            $scope.stockBalance = Math.trunc(accountBalance.stock.balance * 100)/ 100;
 
             $scope.transactionDetails = {};
 
@@ -21,15 +22,36 @@
                     }
                     else {
                         if ($scope.currency == "GBP") {
-                            if ($scope.currencyEquivalent < transactionDetails.amount) {
+                            if ($scope.currencyBalance < transactionDetails.amount) {
                                 $scope.submitMessages.insufficientFunds = true;
                             }
                             else {
                                 TransactionService.makeTransactionCurrency(transactionDetails, $scope.currency).then(function (transactionServiceRes) {
                                     if (transactionServiceRes.status === 200) {
+                                        $scope.currencyBalance = Math.trunc(transactionServiceRes.data.currency.balance * 100)/ 100;
+                                        $scope.stockBalance = Math.trunc(transactionServiceRes.data.stock.balance * 100)/ 100;
                                         $scope.submitMessages.transactionSuccess = true;
-                                        $scope.profileDetails.balance = transactionServiceRes.data.balance;
-                                        $scope.currencyEquivalent = (transactionServiceRes.data.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
+                                    }
+                                }).catch(function (err) {
+                                    if (err.data.errCode === "INV_USER") {
+                                        $scope.submitMessages.invalidRecipient = true;
+                                    }
+                                    else {
+                                        console.log(err);
+                                    }
+                                });
+                            }
+                        }
+                        else {
+                            if ($scope.stockBalance < transactionDetails.amount) {
+                                $scope.submitMessages.insufficientFunds = true;
+                            }
+                            else {
+                                TransactionService.makeTransaction(transactionDetails).then(function (transactionServiceRes) {
+                                    if (transactionServiceRes.status === 200) {
+                                        $scope.currencyBalance = Math.trunc(transactionServiceRes.data.currency.balance * 100)/ 100;
+                                        $scope.stockBalance = Math.trunc(transactionServiceRes.data.stock.balance * 100)/ 100;
+                                        $scope.submitMessages.transactionSuccess = true;
                                     }
                                 }).catch(function (err) {
                                     if (err.data.errCode === "INV_USER") {
@@ -37,19 +59,6 @@
                                     }
                                 });
                             }
-                        }
-                        else {
-                            TransactionService.makeTransaction(transactionDetails).then(function (transactionServiceRes) {
-                                if (transactionServiceRes.status === 200) {
-                                    $scope.submitMessages.transactionSuccess = true;
-                                    $scope.profileDetails.balance = transactionServiceRes.data.balance;
-                                    $scope.currencyEquivalent = (transactionServiceRes.data.balance * profileDetails.FTSEQuote / 1000).toFixed(2);
-                                }
-                            }).catch(function (err) {
-                                if (err.data.errCode === "INV_USER") {
-                                    $scope.submitMessages.invalidRecipient = true;
-                                }
-                            });
                         }
                     }
                 }

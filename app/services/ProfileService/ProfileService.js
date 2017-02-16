@@ -11,6 +11,12 @@
                 });
             };
 
+            ProfileService.getAccountBalance = function () {
+                return $http.get('/api/getAccountBalance').then(function (res) {
+                    return res;
+                })
+            };
+
             return ProfileService;
         })
 })();

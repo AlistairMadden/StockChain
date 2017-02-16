@@ -1,34 +1,48 @@
 <div class="container profile-container">
   <p class="page-title">Profile</p>
   <p>{{profileDetails.username}}</p>
-  <p>Balance: {{profileDetails.balance}} Stocks = {{currencyEquivalent | currency:"£"}}</p>
+  <p>Balance: {{stockBalance}} Stocks = {{currencyBalance | currency:"£"}}</p>
   <form name="transactionForm" ng-submit="makeTransaction(transactionDetails)" novalidate>
 
     <!-- Email -->
-    <div class="form-group" ng-class="{'has-danger': (transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus) || submitMessages.noRecipient}">
+    <div class="form-group"
+         ng-class="{'has-danger': (transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus) || submitMessages.noRecipient}">
       <label class="control-label" for="transactionEmail">Send Stocks to:</label>
-      <input id="transactionEmail" type="email" class="form-control" name="email" ng-model="transactionDetails.username" ng-focus="transactionForm.email.focus=true;submitMessages={};" ng-blur="transactionForm.email.focus=false" required>
-      <p ng-show="(transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus) || submitMessages.noRecipient" class="has-danger form-warning">Please
+      <input id="transactionEmail" type="email" class="form-control" name="email" ng-model="transactionDetails.username"
+             ng-focus="transactionForm.email.focus=true;submitMessages={};" ng-blur="transactionForm.email.focus=false"
+             required>
+      <p
+        ng-show="(transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus) || submitMessages.noRecipient"
+        class="has-danger form-warning">Please
         enter a valid email.</p>
-      <p ng-show="submitMessages.selfEmail && !transactionForm.email.focus">Stop trying to send money to yourself you cheeky git ;)</p>
+      <p ng-show="submitMessages.selfEmail && !transactionForm.email.focus">Stop trying to send money to yourself you
+        cheeky git ;)</p>
     </div>
 
-    <div class="form-group amount-form-group" ng-class="{'has-danger': transactionForm.amount.$invalid && transactionForm.amount.$touched && !transactionForm.amount.focus}">
+    <div class="form-group amount-form-group"
+         ng-class="{'has-danger': transactionForm.amount.$invalid && transactionForm.amount.$touched && !transactionForm.amount.focus}">
       <label class="control-label amount-label" for="transaction-amount">Amount</label>
-      <select class="custom-select currency-dropdown" id="inlineFormCustomSelect" ng-model="currency" ng-init="currency = 'GBP'">
+      <select class="custom-select currency-dropdown" id="inlineFormCustomSelect" ng-model="currency"
+              ng-init="currency = 'GBP'">
         <option selected="selected" value="GBP">GBP (£)</option>
         <option value="1" value="Stocks">Stocks</option>
       </select>
-      <input id="transaction-amount" type="number" class="form-control" name="amount" ng-model="transactionDetails.amount" ng-focus="transactionForm.amount.focus=true;submitMessages={}" ng-blur="transactionForm.amount.focus=false" required>
-      <p ng-show="transactionForm.amount.$invalid && transactionForm.amount.$touched && !transactionForm.amount.focus" class="has-danger form-warning no-amount-warning">Please
+      <input id="transaction-amount" type="number" class="form-control" name="amount"
+             ng-model="transactionDetails.amount" ng-focus="transactionForm.amount.focus=true;submitMessages={}"
+             ng-blur="transactionForm.amount.focus=false" required>
+      <p ng-show="transactionForm.amount.$invalid && transactionForm.amount.$touched && !transactionForm.amount.focus"
+         class="has-danger form-warning no-amount-warning">Please
         enter an amount to send.</p>
-      <p ng-show="submitMessages.insufficientFunds && !transactionForm.amount.focus">Sorry, you do not have enough Stocks to make that transaction.</p>
+      <p ng-show="submitMessages.insufficientFunds && !transactionForm.amount.focus">Sorry, you do not have enough
+        Stocks to make that transaction.</p>
     </div>
 
     <button type="submit" class="btn btn-primary submit-btn">Send</button>
 
-    <p ng-show="submitMessages.transactionSuccess">Sent {{transactionDetails.amount}} Stocks to {{transactionDetails.username}}.</p>
-    <p ng-show="submitMessages.invalidRecipient">Oops, it appears {{transactionDetails.username}} doesn't have an account with us.</p>
+    <p ng-show="submitMessages.transactionSuccess">Sent {{transactionDetails.amount}} Stocks to
+      {{transactionDetails.username}}.</p>
+    <p ng-show="submitMessages.invalidRecipient">Oops, it appears {{transactionDetails.username}} doesn't have an
+      account with us.</p>
 
   </form>
 </div>

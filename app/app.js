@@ -48,6 +48,11 @@
                             }).catch(function () {
                                 $state.go('website.login');
                             });
+                        },
+                        accountBalance: function (ProfileService) {
+                            return ProfileService.getAccountBalance().then(function (res) {
+                                return res.data;
+                            })
                         }
                     }
                 })

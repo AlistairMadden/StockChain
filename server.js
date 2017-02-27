@@ -206,7 +206,7 @@ function authenticate(req, res, callback) {
                     return callback(err, null, req, res);
                 }
                 else if (matchingHash) {
-                    return callback(null, req.body.username, req, res);
+                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
                 }
                 else {
                     err = {};
@@ -250,7 +250,7 @@ apiRoutes.post('/signup', function (req, routeRes) {
 
         // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
         // login
-        var user = {username: req.body.username, password: hash};
+        var user = {username: req.body.username.toLocaleLowerCase(), password: hash};
 
         // insert user (automatic sanitisation)
         sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err) {
@@ -279,24 +279,27 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
 
     // Nothing can be done if we don't have the data/it isn't correct
     if(!req.body.username) {
-        return res.status(400).send({reason: "No recipient email given"});
+        return res.status(400).send({reason: "No recipient email given", errCode: "USER_ERR"});
     }
     else if (!req.body.amount) {
-        return res.status(400).send({reason: "No amount specified"});
+        return res.status(400).send({reason: "No amount specified", errCode: "AMT_ERR"});
     }
     else if(!(typeof(req.body.amount) === "number")) {
-        return res.status(400).send({reason: "Amount given is not a number"});
+        return res.status(400).send({reason: "Amount given is not a number", errCode: "AMT_ERR"});
     }
     else if(!(typeof(req.body.username) === "string")) {
-        return res.status(400).send({reason: "Username given is not a string"});
+        return res.status(400).send({reason: "Username given is not a string", errCode: "USER_ERR"});
     }
     else if(!Number.isInteger(req.body.amount * 100)) {
-        return res.status(400).send({reason: "Amount given has more than two decimal places"});
+        return res.status(400).send({reason: "Amount given has more than two decimal places", errCode: "AMT_ERR"});
+    }
+    else if(req.body.amount < 0) {
+        return res.status(400).send({reason: "Amount given is a negative value", errCode: "AMT_ERR"});
     }
 
     // Semantic problems
     if (req.body.username === req.session.user) {
-        return res.status(400).send({reason: "Recipient's username is same as sender's username"});
+        return res.status(400).send({reason: "Recipient's username is same as sender's username", errCode: "USER_ERR"});
     }
 
     // Check recipient is a valid user
@@ -307,7 +310,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
         }
 
         if(rows.length === 0) {
-            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "INV_USER"});
+            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
         }
 
         // Look up current balance in session store (but for now, just look up direct from sql db)
@@ -320,7 +323,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
             // Not enough money in account
             if (rows[0][0].balance < req.body.amount) {
                 return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
-                req.body.username});
+                req.body.username, errCode: "AMT_ERR"});
             }
 
             sqlConnection.query("CALL stockchain.makeTransaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {

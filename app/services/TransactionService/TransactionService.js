@@ -24,6 +24,12 @@
                 return makeTransaction(transactionDetails);
             };
 
+            transactionService.getAccountTransactions = function() {
+                return $http.get('/api/getAccountTransactions').then(function (res) {
+                    return res;
+                })
+            };
+
             return transactionService;
         })
 })();

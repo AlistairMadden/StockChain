@@ -7,29 +7,11 @@ var express = require('express'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    bcrypt = require('bcrypt'),
     appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
-    schedule = require("node-schedule"),
-    http = require('http');
+    bcrypt = require('bcrypt'),
+    schedule = require("node-schedule");
 
 const saltRounds = 10;
-var FTSEQuote;
-
-http.get({host:"query.yahooapis.com", path:"/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(\"^FTSE\")&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback="}, function(response) {
-    var str = '';
-    response.setEncoding('utf8');
-
-    //another chunk of data has been received, so append it to `str`
-    response.on('data', function (chunk) {
-        str += chunk;
-    });
-
-    //the whole response has been received
-    response.on('end', function () {
-        var parsed = JSON.parse(str);
-        FTSEQuote = parsed.query.results.quote.Open;
-    });
-}).end();
 
 /*
   DB Setup
@@ -45,19 +27,92 @@ var sqlConnection = sql.createConnection({
 // connect to the DB
 sqlConnection.connect(function(err){
     if(err){
-        res.status(500).send({reason: "dbConnectionError"});
+        console.error(err);
     }
 });
 
 /*
-  Schedule a job to run and update the account statements every first of the month
+  Schedule a job to run and update the internal statements daily at 16:40
  */
 var rule = new schedule.RecurrenceRule();
-rule.day = 1;
+rule.hour = 16;
+rule.minute = 40;
 
 var j = schedule.scheduleJob(rule, function(){
-
+    // these may need to be promised...
+    updateShareStatement();
+    updateCashStatement();
+    updateNavValue();
 });
+
+function updateShareStatement() {
+
+    sqlConnection.query("CALL stockchain.get_owned_stocks()", onSqlQueryResponse);
+
+    function onSqlQueryResponse(err, rows) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            var promises = [];
+            rows[0].forEach(function (row) {
+                // if more than one of the stock is held
+                if (row.Amount !== 0) {
+                    // create a promise which will resolve how much of the stock (in monetary terms) we have
+                    promises.push(new Promise(function (resolve, reject) {
+                        https.get({
+                            host: "www.quandl.com", path: "/api/v3/datasets/LSE/" + row["Ticker_Symbol"] +
+                            ".json?limit=1"
+                        }, function onStockDataResponse(response) {
+                            var body = '';
+                            response.setEncoding('utf8');
+
+                            // another chunk of data has been received, so append it to `body`
+                            response.on('data', function (chunk) {
+                                body += chunk;
+                            });
+
+                            // the whole response has been received
+                            response.on('end', function () {
+                                var parsed = JSON.parse(body);
+                                var stockValue = parsed.dataset.data[0][parsed.dataset["column_names"].indexOf("Last Close")];
+                                resolve(stockValue * row["Amount"]);
+                            });
+                        });
+                    }));
+                }
+            });
+            // when all stock values have been resolved or rejected
+            Promise.all(promises).then(function(portfolioValues) {
+                var totalPortfolioValue = 0;
+                portfolioValues.forEach(function (portfolioValue) {
+                    totalPortfolioValue += portfolioValue;
+                });
+                sqlConnection.query('INSERT INTO stockchain.asset_share_statement VALUES (?, ?);', [new Date(), totalPortfolioValue], function (err) {
+                    if(err) {
+                        console.log(err);
+                    }
+                })
+            });
+        }
+    }
+}
+
+function updateCashStatement() {
+    sqlConnection.query("CALL stockchain.update_cash_statement()", function(err) {
+        if(err) {
+            console.error(err);
+        }
+    });
+}
+
+function updateNavValue() {
+    sqlConnection.query("CALL stockchain.update_nav_value()", function (err) {
+        if(err) {
+            console.error(err);
+        }
+    })
+}
 
 /*
   HTTPS Setup
@@ -151,7 +206,7 @@ function authenticate(req, res, callback) {
                     return callback(err, null, req, res);
                 }
                 else if (matchingHash) {
-                    return callback(null, req.body.username, req, res);
+                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
                 }
                 else {
                     err = {};
@@ -195,10 +250,10 @@ apiRoutes.post('/signup', function (req, routeRes) {
 
         // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
         // login
-        var user = {username: req.body.username, password: hash};
+        var user = {username: req.body.username.toLocaleLowerCase(), password: hash};
 
         // insert user (automatic sanitisation)
-        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err, dbRes) {
+        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err) {
             if(err){
                 // handle case of duplicate email entry
                 if(err.code === "ER_DUP_ENTRY") {
@@ -224,21 +279,27 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
 
     // Nothing can be done if we don't have the data/it isn't correct
     if(!req.body.username) {
-        return res.status(400).send({reason: "No recipient email given"});
+        return res.status(400).send({reason: "No recipient email given", errCode: "USER_ERR"});
     }
     else if (!req.body.amount) {
-        return res.status(400).send({reason: "No amount specified"});
+        return res.status(400).send({reason: "No amount specified", errCode: "AMT_ERR"});
     }
     else if(!(typeof(req.body.amount) === "number")) {
-        return res.status(400).send({reason: "Amount given is not a number"});
+        return res.status(400).send({reason: "Amount given is not a number", errCode: "AMT_ERR"});
     }
     else if(!(typeof(req.body.username) === "string")) {
-        return res.status(400).send({reason: "Username given is not a string"});
+        return res.status(400).send({reason: "Username given is not a string", errCode: "USER_ERR"});
+    }
+    else if(!Number.isInteger(req.body.amount * 100)) {
+        return res.status(400).send({reason: "Amount given has more than two decimal places", errCode: "AMT_ERR"});
+    }
+    else if(req.body.amount < 0) {
+        return res.status(400).send({reason: "Amount given is a negative value", errCode: "AMT_ERR"});
     }
 
     // Semantic problems
     if (req.body.username === req.session.user) {
-        return res.status(400).send({reason: "Recipient's username is same as sender's username"});
+        return res.status(400).send({reason: "Recipient's username is same as sender's username", errCode: "USER_ERR"});
     }
 
     // Check recipient is a valid user
@@ -249,28 +310,20 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
         }
 
         if(rows.length === 0) {
-            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "INV_USER"});
+            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
         }
 
         // Look up current balance in session store (but for now, just look up direct from sql db)
-        sqlConnection.query("CALL stockchain.getAccountStatement(?)", req.session.user, function(err, rows) {
+        sqlConnection.query("CALL stockchain.get_account_balance(?)", req.session.user, function(err, rows) {
             if (err) {
                 console.error(err);
                 return res.status(500).send({reason: "Error fetching account statement from DB"});
             }
 
-            // Make GBP conversion
-            if(req.body.currency) {
-                req.body.amount = Math.round(req.body.amount / (FTSEQuote/1000));
-            }
-            else if(req.body.amount % 1 !== 0) {
-                return res.status(400).send({reason: "Amount given is not an integer value"});
-            }
-
             // Not enough money in account
             if (rows[0][0].balance < req.body.amount) {
                 return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
-                req.body.username});
+                req.body.username, errCode: "AMT_ERR"});
             }
 
             sqlConnection.query("CALL stockchain.makeTransaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
@@ -279,7 +332,23 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
                     return res.status(500).send({reason: "Error writing transaction to DB"});
                 }
 
-                res.status(200).send({balance: rows[0][0].balance - req.body.amount});
+                sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbRes) {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({reason: "Error fetching updated currency balance"});
+                    }
+
+                    var currency = dbRes[0][0];
+
+                    sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbRes) {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({reason: "Error fetching updated stock balance"});
+                        }
+
+                        res.status(200).send({"currency": currency, "stock": dbRes[0][0]});
+                    });
+                });
             });
         });
     });
@@ -288,7 +357,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
 /**
  * Gets the logged in user's transactions
  */
-apiRoutes.get("/getTransactions", restrict, function (req, res) {
+apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
     sqlConnection.query("call stockchain.getAccountTransactions(?)", req.session.user, function (err, dbResponse) {
         if (err) {
             console.error(err);
@@ -296,6 +365,27 @@ apiRoutes.get("/getTransactions", restrict, function (req, res) {
         }
 
         res.status(200).send(dbResponse[0]);
+    })
+});
+
+apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
+    sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbResponse) {
+        if (err) {
+            console.error(err);
+            return res.status(500).send({reason: "Error fetching transactions from DB"});
+        }
+
+        var preferredCurrencyBalance = dbResponse[0][0];
+
+        sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbResponse) {
+            if (err) {
+                console.error(err);
+                return res.status(500).send({reason: "Error fetching transactions from DB"});
+            }
+
+
+            res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
+        })
     })
 });
 
@@ -310,52 +400,7 @@ var protectedRoutes = express.Router();
 
 // I need help from callback hell
 protectedRoutes.get('/profile', restrict, function (req, res) {
-    sqlConnection.query("SELECT account_id FROM accountAuth WHERE username = ?", req.session.user,
-        function (err, dbRes) {
-            if (err) {
-                res.status(500).send({reason: "dbQueryError"});
-            }
-            else {
-                var accountId = dbRes[0].account_id;
-                sqlConnection.query("SELECT Closing_Balance, Statement_Date FROM accountstatement WHERE account_id = ? ORDER BY Statement_Date DESC LIMIT 1", accountId,
-                    function (err, dbRes) {
-                        if (err) {
-                            res.status(500).send({reason: "dbQueryError"});
-                        }
-                        else {
-                            var lastStatementBalance = 0;
-                            var lastStatementDate = new Date();
-                            lastStatementDate.setDate(1);
-                            lastStatementDate.setTime(0);
-
-                            if (dbRes[0]) {
-                                lastStatementBalance = dbRes[0]['Closing_Balance'];
-                                lastStatementDate = dbRes[0]['Statement_Date'];
-                            }
-
-
-                            sqlConnection.query("SELECT Transaction_Amount, Transaction_ID FROM accounttransaction WHERE Transaction_DateTime >= ? AND Account_ID = ?", [lastStatementDate, accountId], function (err, dbRes) {
-                                if (err) {
-                                    res.status(500).send({reason: "dbQueryError"});
-                                }
-                                else {
-
-                                    for (var i in dbRes) {
-                                        if (dbRes[i]['Transaction_ID'] == 'C') {
-                                            lastStatementBalance += dbRes[i]['Transaction_Amount'];
-                                        }
-                                        else if (dbRes[i]['Transaction_ID'] == 'D') {
-                                            lastStatementBalance -= dbRes[i]['Transaction_Amount'];
-                                        }
-                                    }
-                                    
-                                    res.send({username: req.session.user, balance: lastStatementBalance, FTSEQuote: FTSEQuote});
-                                }
-                            });
-                        }
-                    })
-            }
-        });
+    res.send({username: req.session.user});
 });
 
 app.use('/user', protectedRoutes);

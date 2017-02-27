@@ -1,0 +1,19 @@
+<div class="container profile-container">
+  <table class="table table-bordered">
+    <thead class="thead-inverse">
+      <tr>
+        <th>To/From</th>
+        <th align="right">Amount</th>
+        <th align="right">Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="transaction in message">
+        <!--<th scope="row">{{transaction.Transaction_ID}}</th>-->
+        <td>{{transaction.Counterparty}}</td>
+        <td align="right" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</td>
+        <td align="right">{{transaction.Transaction_DateTime}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -2,7 +2,7 @@
     'use strict';
 
     angular.module('stockChain', ['ui.router', 'components.home', 'components.login',
-        'components.signup', 'components.overview', 'components.account', 'api.AuthService', 'api.ProfileService',
+        'components.signup', 'components.overview', 'components.transactions', 'components.account', 'api.AuthService', 'api.ProfileService',
         'api.TransactionService'
     ])
         .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
@@ -48,12 +48,17 @@
                             }).catch(function () {
                                 $state.go('website.login');
                             });
+                        },
+                        accountBalance: function (ProfileService) {
+                            return ProfileService.getAccountBalance().then(function (res) {
+                                return res.data;
+                            })
                         }
                     }
                 })
                 .state('account.transactions', {
                     url: '/transactions',
-                    templateUrl: 'components/account/transactions.html',
+                    templateUrl: 'components/account/transactions/transactions.html',
                     controller: 'transactionsController',
                     resolve: {
                         profileDetails: function (ProfileService, $state) {
@@ -62,6 +67,11 @@
                             }).catch(function () {
                                 $state.go('website.login');
                             });
+                        },
+                        accountTransactions: function (TransactionService) {
+                            return TransactionService.getAccountTransactions().then(function (res) {
+                                return res.data;
+                            })
                         }
                     }
                 })

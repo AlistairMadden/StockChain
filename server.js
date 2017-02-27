@@ -354,7 +354,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
 /**
  * Gets the logged in user's transactions
  */
-apiRoutes.get("/getTransactions", restrict, function (req, res) {
+apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
     sqlConnection.query("call stockchain.getAccountTransactions(?)", req.session.user, function (err, dbResponse) {
         if (err) {
             console.error(err);

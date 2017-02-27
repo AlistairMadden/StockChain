@@ -1,53 +1,91 @@
-(function() {
+(function () {
     'use strict';
 
-    angular.module('stockChain', ['ui.router', 'components.home', 'api.transactions', 'components.transactions',
-            'components.login', 'api.AuthService'
-        ])
-        .config(function($urlRouterProvider, $stateProvider, $locationProvider, AUTH_EVENTS, $httpProvider) {
+    angular.module('stockChain', ['ui.router', 'components.home', 'components.login',
+        'components.signup', 'components.overview', 'components.transactions', 'components.account', 'api.AuthService', 'api.ProfileService',
+        'api.TransactionService'
+    ])
+        .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
 
             $httpProvider.defaults.withCredentials = true;
 
             $locationProvider.html5Mode(true);
 
             $stateProvider
-                .state('home', {
-                    url: '/',
+                .state('website', {
+                    abstract: true,
                     templateUrl: 'components/home/home.html',
                     controller: 'homeController'
                 })
-                .state('transactions', {
-                    url: '/transactions',
-                    templateUrl: 'components/transactions/transactions.html',
-                    controller: 'transactionsController',
-                    resolve: {
-                        user: function(AuthService) {
-                            return AuthService.isAuthenticated();
-                        }
-                    }
+                .state('website.welcome', {
+                    url: '/',
+                    templateUrl: 'components/home/welcome.html'
                 })
-                .state('login', {
+                .state('website.login', {
                     url: '/login',
                     templateUrl: 'components/login/login.html',
                     controller: 'loginController'
+                })
+                .state('website.signup', {
+                    url: '/signup',
+                    templateUrl: 'components/signup/signup.html',
+                    controller: 'signupController'
+                })
+                .state('account', {
+                    abstract: true,
+                    url: '/account',
+                    templateUrl: 'components/account/account.html',
+                    controller: 'accountController'
+                })
+                .state('account.overview', {
+                    url: '/overview',
+                    templateUrl: 'components/account/overview.html',
+                    controller: 'overviewController',
+                    resolve: {
+                        profileDetails: function (ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function (res) {
+                                return res.data;
+                            }).catch(function () {
+                                $state.go('website.login');
+                            });
+                        },
+                        accountBalance: function (ProfileService) {
+                            return ProfileService.getAccountBalance().then(function (res) {
+                                return res.data;
+                            })
+                        }
+                    }
+                })
+                .state('account.transactions', {
+                    url: '/transactions',
+                    templateUrl: 'components/account/transactions/transactions.html',
+                    controller: 'transactionsController',
+                    resolve: {
+                        profileDetails: function (ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function (res) {
+                                return res.data;
+                            }).catch(function () {
+                                $state.go('website.login');
+                            });
+                        },
+                        accountTransactions: function (TransactionService) {
+                            return TransactionService.getAccountTransactions().then(function (res) {
+                                return res.data;
+                            })
+                        }
+                    }
+                })
+                .state('account.logout', {
+                    controller: function ($scope, $state, AuthService) {
+                        AuthService.logout().then(function () {
+                            $state.go('website.welcome');
+                        });
+                    }
                 });
 
             $urlRouterProvider.otherwise('/404');
         })
-        .constant('AUTH_EVENTS', {
-            loginSuccess: 'auth-login-success',
-            loginFailed: 'auth-login-failed',
-            logoutSuccess: 'auth-logout-success',
-            sessionTimeout: 'auth-session-timeout',
-            notAuthenticated: 'auth-not-authenticated',
-            notAuthorized: 'auth-not-authorized'
-        })
-        .controller('stockChain', function($scope) {
+        .controller('stockChain', function ($scope) {
 
-            $scope.currentUser = null;
-
-            $scope.setCurrentUser = function(user) {
-                $scope.currentUser = user;
-            };
         });
 })();

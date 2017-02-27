@@ -1,29 +1,118 @@
 var express = require('express'),
     app = express(),
-    mongoose = require('mongoose'),
+    sql = require('mysql'),
     morgan = require('morgan'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    bcyrpt = require('bcrypt'),
-    jwt = require('jsonwebtoken'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8'));
+    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
+    bcrypt = require('bcrypt'),
+    schedule = require("node-schedule");
 
 const saltRounds = 10;
 
 /*
   DB Setup
 */
-mongoose.connect(appDetails.dbURL);
-var localUserSchema = new mongoose.Schema({
-    username: String,
-    hash: String
+
+var sqlConnection = sql.createConnection({
+    host: appDetails.sqlDbUrl,
+    user: appDetails.sqlDbUser,
+    password: appDetails.sqlDbPassword,
+    database: appDetails.sqlDbName
 });
 
-var Users = mongoose.model('userauths', localUserSchema);
+// connect to the DB
+sqlConnection.connect(function(err){
+    if(err){
+        console.error(err);
+    }
+});
 
+/*
+  Schedule a job to run and update the internal statements daily at 16:40
+ */
+var rule = new schedule.RecurrenceRule();
+rule.hour = 16;
+rule.minute = 40;
+
+var j = schedule.scheduleJob(rule, function(){
+    // these may need to be promised...
+    updateShareStatement();
+    updateCashStatement();
+    updateNavValue();
+});
+
+function updateShareStatement() {
+
+    sqlConnection.query("CALL stockchain.get_owned_stocks()", onSqlQueryResponse);
+
+    function onSqlQueryResponse(err, rows) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            var promises = [];
+            rows[0].forEach(function (row) {
+                // if more than one of the stock is held
+                if (row.Amount !== 0) {
+                    // create a promise which will resolve how much of the stock (in monetary terms) we have
+                    promises.push(new Promise(function (resolve, reject) {
+                        https.get({
+                            host: "www.quandl.com", path: "/api/v3/datasets/LSE/" + row["Ticker_Symbol"] +
+                            ".json?limit=1"
+                        }, function onStockDataResponse(response) {
+                            var body = '';
+                            response.setEncoding('utf8');
+
+                            // another chunk of data has been received, so append it to `body`
+                            response.on('data', function (chunk) {
+                                body += chunk;
+                            });
+
+                            // the whole response has been received
+                            response.on('end', function () {
+                                var parsed = JSON.parse(body);
+                                var stockValue = parsed.dataset.data[0][parsed.dataset["column_names"].indexOf("Last Close")];
+                                resolve(stockValue * row["Amount"]);
+                            });
+                        });
+                    }));
+                }
+            });
+            // when all stock values have been resolved or rejected
+            Promise.all(promises).then(function(portfolioValues) {
+                var totalPortfolioValue = 0;
+                portfolioValues.forEach(function (portfolioValue) {
+                    totalPortfolioValue += portfolioValue;
+                });
+                sqlConnection.query('INSERT INTO stockchain.asset_share_statement VALUES (?, ?);', [new Date(), totalPortfolioValue], function (err) {
+                    if(err) {
+                        console.log(err);
+                    }
+                })
+            });
+        }
+    }
+}
+
+function updateCashStatement() {
+    sqlConnection.query("CALL stockchain.update_cash_statement()", function(err) {
+        if(err) {
+            console.error(err);
+        }
+    });
+}
+
+function updateNavValue() {
+    sqlConnection.query("CALL stockchain.update_nav_value()", function (err) {
+        if(err) {
+            console.error(err);
+        }
+    })
+}
 
 /*
   HTTPS Setup
@@ -49,6 +138,9 @@ app.all('*', function(req, res, next) {
 // Make files in app directory available
 app.use(express.static(__dirname + '/app'));
 
+// Make nodejs modules available
+app.use(express.static(__dirname + '/node_modules'));
+
 // Use body parser so information can be grabbed from POST and/or URL parameters
 app.use(bodyParser.urlencoded({
     extended: false
@@ -61,26 +153,23 @@ app.use(morgan('dev'));
 // Use cookieParser for handling of cookies
 app.use(cookieParser());
 
-// TESTING ROUTE
-app.get('/setup', function(req, res) {
+// Use express-session for user login sessions
+app.use(session({
+    secret: appDetails.secret,
+    name: 'sessionId', // give the cookie a different name from the standard
+    resave: false, // don't save session if unmodified
+    saveUninitialized: false, // don't create session until something stored
+    cookie: {secure: true} // https
+}));
 
-    // create a sample user
-    var ali = new Users({
-        name: 'Alistair Madden',
-        password: 'password'
-    });
-
-    // save the sample user
-    ali.save(function(err) {
-        if (err) throw err;
-
-        console.log('User saved successfully');
-        res.json({
-            success: true
-        });
-    });
-});
-
+function restrict(req, res, next) {
+    if (req.session.user) {
+        next();
+    } else {
+        req.session.error = 'Access denied!';
+        res.status(401).send()
+    }
+}
 
 /*
   API routes
@@ -88,92 +177,233 @@ app.get('/setup', function(req, res) {
 
 var apiRoutes = express.Router();
 
-// log in check route
-apiRoutes.post('/loggedin', function(req, res) {
-    res.sendStatus(isAuthenticated(req));
+// log in route
+apiRoutes.post('/login', function (req, res) {
+    authenticate(req, res, handleAuthenticationResponse);
 });
 
-function isAuthenticated(req) {
-    if (req.cookies['X-XSRF-TOKEN']) {
-        if (req.cookies['X-XSRF-TOKEN'] === appDetails.secret) {
-            if (req.cookies['session']) {
-            }
+/**
+ * Authentication function
+ *
+ * Checks the db for matching username and hash combination, calls the supplied callback with appropriate arguments.
+ *
+ * @param req - the request received by the web server
+ * @param res - the response to be sent by the web server
+ * @param callback - function(err, user) -> user is the email of the authenticated user
+ */
+function authenticate(req, res, callback) {
+
+    // Is username in DB?
+    sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
+        if (err) {
+            // DB error
+            return callback(err, null, req, res);
         }
-    } else {
-        return 401;
+        else if (!(rows === undefined || rows.length === 0)) {
+            // Hashed passwords match?
+            return bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
+                if (err) {
+                    return callback(err, null, req, res);
+                }
+                else if (matchingHash) {
+                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
+                }
+                else {
+                    err = {};
+                    err.statusCode = 401;
+                    return callback(err, null, req, res);
+                }
+            })
+        }
+        else {
+            err = {};
+            err.statusCode = 401;
+            return callback(err, null, req, res);
+        }
+    })
+}
+
+function handleAuthenticationResponse(err, user, req, res) {
+    if (err) {
+        res.status(err.statusCode).send();
+    }
+    else if (user) {
+        req.session.regenerate(function () {
+            req.session.user = user;
+            res.status(200).send();
+        });
     }
 }
 
-// Sign up route
-/*app.post('/api/signup', function(req, res) {
-    if(req.cookies.token)
-});*/
+// log out route
+apiRoutes.get('/logout', function(req, res) {
+    // destroy the user's session to log them out
+    // will be re-created next request
+    req.session.destroy(function(){
+        res.status(200).send();
+    });
+});
 
-// log in route
-app.post('/api/login', function(req, res) {
-    // if (req.cookies) {
-    //     console.log(req.cookies);
-    //     res.send('cookie already created');
-    // } else {
-        // find the user
-        Users.findOne({
-            name: req.body.name
-        }, function(err, user) {
+apiRoutes.post('/signup', function (req, routeRes) {
 
-            console.log(user.password);
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
 
-            if (err) throw err;
+        // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
+        // login
+        var user = {username: req.body.username.toLocaleLowerCase(), password: hash};
 
-            if (!user) {
-                res.json({
-                    success: false,
-                    message: 'Authentication failed. User not found.'
-                });
-            } else if (user) {
-
-                // check if password matches
-                if (user.password != req.body.password) {
-                    res.json({
-                        success: false,
-                        message: 'Authentication failed. Wrong password.'
-                    });
-                } else {
-
-                    // if user is found and password is right
-                    // create a token
-                    var token = jwt.sign(user, appDetails.secret);
-
-                    res.cookie('token', token, {
-                        httpOnly: true,
-                        secure: true
-                    });
-
-                    res.cookie('X-XSRF-TOKEN', appDetails.secret);
-
-                    // return the information including token as JSON
-                    res.json({
-                        success: true,
-                        message: 'Enjoy your token!',
-                        token: token
-                    });
+        // insert user (automatic sanitisation)
+        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err) {
+            if(err){
+                // handle case of duplicate email entry
+                if(err.code === "ER_DUP_ENTRY") {
+                    routeRes.status(409).send({reason: err.code});
                 }
+                else {
+                    routeRes.status(500).send({reason: "dbInsertionError"});
+                }
+            }
+            else {
+                authenticate(req, routeRes, handleAuthenticationResponse);
+            }
+        });
+    });
+});
 
+/**
+ * Route used to make a transaction between user accounts
+ *
+ *
+ */
+apiRoutes.post("/makeTransaction", restrict, function (req, res) {
+
+    // Nothing can be done if we don't have the data/it isn't correct
+    if(!req.body.username) {
+        return res.status(400).send({reason: "No recipient email given", errCode: "USER_ERR"});
+    }
+    else if (!req.body.amount) {
+        return res.status(400).send({reason: "No amount specified", errCode: "AMT_ERR"});
+    }
+    else if(!(typeof(req.body.amount) === "number")) {
+        return res.status(400).send({reason: "Amount given is not a number", errCode: "AMT_ERR"});
+    }
+    else if(!(typeof(req.body.username) === "string")) {
+        return res.status(400).send({reason: "Username given is not a string", errCode: "USER_ERR"});
+    }
+    else if(!Number.isInteger(req.body.amount * 100)) {
+        return res.status(400).send({reason: "Amount given has more than two decimal places", errCode: "AMT_ERR"});
+    }
+    else if(req.body.amount < 0) {
+        return res.status(400).send({reason: "Amount given is a negative value", errCode: "AMT_ERR"});
+    }
+
+    // Semantic problems
+    if (req.body.username === req.session.user) {
+        return res.status(400).send({reason: "Recipient's username is same as sender's username", errCode: "USER_ERR"});
+    }
+
+    // Check recipient is a valid user
+    sqlConnection.query("SELECT username FROM accountauth WHERE username = ?", req.body.username, function (err, rows) {
+        if (err) {
+            console.log(err);
+            return res.status(500).send({reason: "DB query error"});
+        }
+
+        if(rows.length === 0) {
+            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
+        }
+
+        // Look up current balance in session store (but for now, just look up direct from sql db)
+        sqlConnection.query("CALL stockchain.get_account_balance(?)", req.session.user, function(err, rows) {
+            if (err) {
+                console.error(err);
+                return res.status(500).send({reason: "Error fetching account statement from DB"});
             }
 
+            // Not enough money in account
+            if (rows[0][0].balance < req.body.amount) {
+                return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
+                req.body.username, errCode: "AMT_ERR"});
+            }
+
+            sqlConnection.query("CALL stockchain.makeTransaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).send({reason: "Error writing transaction to DB"});
+                }
+
+                sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbRes) {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({reason: "Error fetching updated currency balance"});
+                    }
+
+                    var currency = dbRes[0][0];
+
+                    sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbRes) {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({reason: "Error fetching updated stock balance"});
+                        }
+
+                        res.status(200).send({"currency": currency, "stock": dbRes[0][0]});
+                    });
+                });
+            });
         });
-    // }
+    });
 });
 
-// log out route
-app.post('/api/logout', function(req, res) {
-    req.logOut();
-    res.send(200);
+/**
+ * Gets the logged in user's transactions
+ */
+apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
+    sqlConnection.query("call stockchain.getAccountTransactions(?)", req.session.user, function (err, dbResponse) {
+        if (err) {
+            console.error(err);
+            return res.status(500).send({reason: "Error fetching transactions from DB"});
+        }
+
+        res.status(200).send(dbResponse[0]);
+    })
 });
 
+apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
+    sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbResponse) {
+        if (err) {
+            console.error(err);
+            return res.status(500).send({reason: "Error fetching transactions from DB"});
+        }
+
+        var preferredCurrencyBalance = dbResponse[0][0];
+
+        sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbResponse) {
+            if (err) {
+                console.error(err);
+                return res.status(500).send({reason: "Error fetching transactions from DB"});
+            }
+
+
+            res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
+        })
+    })
+});
+
+// apply the routes to the web server with the prefix /api
+app.use('/api', apiRoutes);
 
 /*
   All other routes
  */
+
+var protectedRoutes = express.Router();
+
+// I need help from callback hell
+protectedRoutes.get('/profile', restrict, function (req, res) {
+    res.send({username: req.session.user});
+});
+
+app.use('/user', protectedRoutes);
 
 app.get('/*', function(req, res) {
     res.sendFile(path.join(__dirname + '/index.html'));

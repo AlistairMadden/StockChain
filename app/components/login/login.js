@@ -2,16 +2,18 @@
  * Created by Alistair on 15/11/2016.
  */
 
-(function() {
+(function () {
     'use strict';
 
     // Define the component and controller loaded in our test
     angular.module('components.login', [])
-        .controller('loginController', function($scope, $rootScope, AUTH_EVENTS, AuthService) {
+        .controller('loginController', function ($scope, $rootScope, AuthService, $state) {
+
             $scope.credentials = {
                 username: '',
                 password: ''
             };
+
             /**
              * Login function
              *
@@ -22,12 +24,15 @@
              * @param credentials
              */
             $scope.login = function (credentials) {
-                AuthService.login(credentials).then(function success (user) {
-                    $scope.setCurrentUser(user);
-                    $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
-                }, function failure () {
-                    $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
-                })
+                if ($scope.credentials.username && $scope.credentials.password) {
+                    AuthService.login(credentials).then(function () {
+                        $state.go('account.overview');
+                    }).catch(function (res) {
+                        if(res.status == 401) {
+                            $scope.unrecognisedCredentials = true;
+                        }
+                    });
+                }
             }
         })
 })();

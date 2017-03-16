@@ -1,6 +1,6 @@
-drop table accounttransaction;
+DROP TABLE IF EXISTS `account_transaction`;
 
-CREATE table AccountTransaction(
+CREATE table account_transaction(
 	Transaction_ID INT UNSIGNED NOT NULL auto_increment,
 	Account_ID INT UNSIGNED NOT NULL,
 	Transaction_DateTime TIMESTAMP NOT NULL,

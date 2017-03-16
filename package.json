@@ -4,7 +4,7 @@
   "description": "A blockchain based trading application",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mysql -u root -p < \"C:\\Users\\Alistair\\Google Drive\\StockChain\\StockChain\\stockchain_openchain_backup.sql\" && node testServer.js"
   },
   "author": "",
   "license": "ISC",

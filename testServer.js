@@ -94,71 +94,12 @@ function signInNoAccount(callback) {
         }
         else if (rows === undefined || rows.length === 0) {
             console.log("OK - signInNoAccount");
-            callback(everythingIsOK);
+            callback(signIn);
         }
         else {
             console.error("Fail - signInNoAccount\nReason: Account returned when one shouldn't be?! What the hell?");
         }
     })
-}
-
-/**
- * Authentication function
- *
- * Checks the db for matching username and hash combination, calls the supplied callback with appropriate arguments.
- *
- * @param req - the request received by the web server
- * @param res - the response to be sent by the web server
- * @param callback - function(err, user) -> user is the email of the authenticated user
- */
-function authenticate(req, res, callback) {
-
-    // Is username in DB?
-    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
-        if (err) {
-            // DB error
-            return callback(err, null, req, res);
-        }
-        else if (!(rows === undefined || rows.length === 0)) {
-            // Hashed passwords match?
-            return bcrypt.compare(req.body.password, rows[0]["Password_Hash"], function (err, matchingHash) {
-                if (err) {
-                    return callback(err, null, req, res);
-                }
-                else if (matchingHash) {
-                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
-                }
-                else {
-                    err = {};
-                    err.statusCode = 401;
-                    return callback(err, null, req, res);
-                }
-            })
-        }
-        else {
-            err = {};
-            err.statusCode = 401;
-            return callback(err, null, req, res);
-        }
-    })
-}
-
-function handleAuthenticationResponse(err, user, req, res) {
-    if (err) {
-        if (err.statusCode === 401) {
-            res.status(401).send();
-        }
-        else {
-            console.error(err);
-            res.status(500).send();
-        }
-    }
-    else if (user) {
-        req.session.regenerate(function () {
-            req.session.user = user;
-            res.status(200).send();
-        });
-    }
 }
 
 function userSignUp(callback) {
@@ -197,7 +138,7 @@ function userSignUp(callback) {
                                 }
                                 else if (matchingHash) {
                                     console.log("OK - userSignUp");
-                                    callback();
+                                    callback(everythingIsOK);
                                 }
                                 else {
                                     // no error and no matching hash = incorrect hash
@@ -216,6 +157,38 @@ function userSignUp(callback) {
             }
         });
     });
+}
+
+function signIn(callback) {
+    var req = {body: {}};
+    req.body.username = "alistair.john.madden@gmail.com";
+    req.body.password = "password";
+
+    // Is username in DB?
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+        if (err) {
+            // DB error
+            console.error("Fail - signIn\nReason: Database error")
+        }
+        else if (!(rows === undefined || rows.length === 0)) {
+            // Hashed passwords match?
+            return bcrypt.compare(req.body.password, rows[0]["Password_Hash"], function (err, matchingHash) {
+                if (err) {
+                    console.error("Fail - signIn\nReason: bcrypt error")
+                }
+                else if (matchingHash) {
+                    console.log("OK - signIn");
+                    callback();
+                }
+                else {
+                    console.error("Fail - signIn\nReason: Invalid password for username " + req.body.username);
+                }
+            })
+        }
+        else {
+            console.error("Fail - signIn\nReason: No such user " + req.body.username);
+        }
+    })
 }
 
 function everythingIsOK() {

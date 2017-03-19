@@ -47,7 +47,7 @@ var j = schedule.scheduleJob(rule, function(){
 
 function updateShareStatement() {
 
-    sqlConnection.query("CALL stockchain.get_owned_stocks()", onSqlQueryResponse);
+    sqlConnection.query("CALL get_owned_stocks()", onSqlQueryResponse);
 
     function onSqlQueryResponse(err, rows) {
         if (err) {
@@ -88,7 +88,8 @@ function updateShareStatement() {
                 portfolioValues.forEach(function (portfolioValue) {
                     totalPortfolioValue += portfolioValue;
                 });
-                sqlConnection.query('INSERT INTO stockchain.asset_share_statement VALUES (?, ?);', [new Date(), totalPortfolioValue], function (err) {
+                // for now, the Account_ID is always 0
+                sqlConnection.query('INSERT INTO asset_share_statement VALUES (?, ?, ?);', [0, new Date(), totalPortfolioValue], function (err) {
                     if(err) {
                         console.log(err);
                     }
@@ -99,7 +100,7 @@ function updateShareStatement() {
 }
 
 function updateCashStatement() {
-    sqlConnection.query("CALL stockchain.update_cash_statement()", function(err) {
+    sqlConnection.query("CALL update_cash_statement()", function(err) {
         if(err) {
             console.error(err);
         }
@@ -107,7 +108,7 @@ function updateCashStatement() {
 }
 
 function updateNavValue() {
-    sqlConnection.query("CALL stockchain.update_nav_value()", function (err) {
+    sqlConnection.query("CALL update_nav_value()", function (err) {
         if(err) {
             console.error(err);
         }
@@ -194,14 +195,14 @@ apiRoutes.post('/login', function (req, res) {
 function authenticate(req, res, callback) {
 
     // Is username in DB?
-    sqlConnection.query("SELECT * FROM accountAuth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
         if (err) {
             // DB error
             return callback(err, null, req, res);
         }
         else if (!(rows === undefined || rows.length === 0)) {
             // Hashed passwords match?
-            return bcrypt.compare(req.body.password, rows[0].password, function (err, matchingHash) {
+            return bcrypt.compare(req.body.password, rows[0]["Password_Hash"], function (err, matchingHash) {
                 if (err) {
                     return callback(err, null, req, res);
                 }
@@ -225,7 +226,13 @@ function authenticate(req, res, callback) {
 
 function handleAuthenticationResponse(err, user, req, res) {
     if (err) {
-        res.status(err.statusCode).send();
+        if (err.statusCode === 401) {
+            res.status(401).send();
+        }
+        else {
+            console.error(err);
+            res.status(500).send();
+        }
     }
     else if (user) {
         req.session.regenerate(function () {
@@ -250,20 +257,22 @@ apiRoutes.post('/signup', function (req, routeRes) {
 
         // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
         // login
-        var user = {username: req.body.username.toLocaleLowerCase(), password: hash};
+        var user = {Username: req.body.username.toLocaleLowerCase(), Password_Hash: hash};
 
         // insert user (automatic sanitisation)
-        sqlConnection.query("INSERT INTO accountAuth SET ?", user, function(err) {
+        sqlConnection.query("INSERT INTO account_auth SET ?", user, function(err) {
             if(err){
                 // handle case of duplicate email entry
                 if(err.code === "ER_DUP_ENTRY") {
                     routeRes.status(409).send({reason: err.code});
                 }
                 else {
+                    console.error(err);
                     routeRes.status(500).send({reason: "dbInsertionError"});
                 }
             }
             else {
+                // also login
                 authenticate(req, routeRes, handleAuthenticationResponse);
             }
         });
@@ -303,7 +312,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
     }
 
     // Check recipient is a valid user
-    sqlConnection.query("SELECT username FROM accountauth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT username FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
         if (err) {
             console.log(err);
             return res.status(500).send({reason: "DB query error"});
@@ -314,7 +323,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
         }
 
         // Look up current balance in session store (but for now, just look up direct from sql db)
-        sqlConnection.query("CALL stockchain.get_account_balance(?)", req.session.user, function(err, rows) {
+        sqlConnection.query("CALL get_account_balance(?)", req.session.user, function(err, rows) {
             if (err) {
                 console.error(err);
                 return res.status(500).send({reason: "Error fetching account statement from DB"});
@@ -326,13 +335,13 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
                 req.body.username, errCode: "AMT_ERR"});
             }
 
-            sqlConnection.query("CALL stockchain.makeTransaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
+            sqlConnection.query("CALL make_transaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
                 if (err) {
                     console.error(err);
                     return res.status(500).send({reason: "Error writing transaction to DB"});
                 }
 
-                sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbRes) {
+                sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbRes) {
                     if (err) {
                         console.error(err);
                         return res.status(500).send({reason: "Error fetching updated currency balance"});
@@ -340,7 +349,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
 
                     var currency = dbRes[0][0];
 
-                    sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbRes) {
+                    sqlConnection.query("call get_account_stock_balance(?)", req.session.user, function (err, dbRes) {
                         if (err) {
                             console.error(err);
                             return res.status(500).send({reason: "Error fetching updated stock balance"});
@@ -358,7 +367,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
  * Gets the logged in user's transactions
  */
 apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
-    sqlConnection.query("call stockchain.getAccountTransactions(?)", req.session.user, function (err, dbResponse) {
+    sqlConnection.query("call get_account_transactions(?)", req.session.user, function (err, dbResponse) {
         if (err) {
             console.error(err);
             return res.status(500).send({reason: "Error fetching transactions from DB"});
@@ -369,24 +378,39 @@ apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
 });
 
 apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
-    sqlConnection.query("call stockchain.get_account_balance(?)", req.session.user, function (err, dbResponse) {
+
+    // Is username in DB?
+    sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
         if (err) {
-            console.error(err);
-            return res.status(500).send({reason: "Error fetching transactions from DB"});
+            console.log(err);
+            return res.status(500).send({reason: "DB query error"});
         }
 
-        var preferredCurrencyBalance = dbResponse[0][0];
+        if (rows.length === 0) {
+            return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
+        }
 
-        sqlConnection.query("call stockchain.get_account_stock_balance(?)", req.session.user, function (err, dbResponse) {
+        sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbResponse) {
             if (err) {
                 console.error(err);
                 return res.status(500).send({reason: "Error fetching transactions from DB"});
             }
 
+            var preferredCurrencyBalance = dbResponse[0][0];
 
-            res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
+            sqlConnection.query("call get_account_stock_balance(?)", req.session.user, function (err, dbResponse) {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).send({reason: "Error fetching transactions from DB"});
+                }
+
+                console.log(preferredCurrencyBalance);
+                console.log(dbResponse[0][0]);
+
+                res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
+            })
         })
-    })
+    });
 });
 
 // apply the routes to the web server with the prefix /api

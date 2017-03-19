@@ -1,7 +1,7 @@
-drop table asset_share_statement;
+DROP TABLE IF EXISTS `asset_share_statement`;
 
 CREATE table asset_share_statement(
-    Statement_Date DATE not null,
-    #ambitious
+	Account_ID int unsigned not null,
+    Statement_Date date not null,
     Closing_Balance decimal(15,2) not null,
     primary key(Statement_Date));

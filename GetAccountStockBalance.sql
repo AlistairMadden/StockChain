@@ -3,36 +3,41 @@ DROP PROCEDURE IF EXISTS `get_account_stock_balance`;
 DELIMITER $$
 create procedure get_account_stock_balance(IN inputUsername VARCHAR(50)) 
 # Takes a username as input and returns the balance of the account associated with the username.
-# Returns an empty set if no such username exists.
+# The inputUsername must be a valid username in the account_auth table.
 
 BEGIN
 
-# Stock held by account. Relies on daily updated nav_value.
-SELECT Closing_Balance + IFNULL(Account_Change, 0) as stock_balance
-FROM
-	# Previous statement stock determination
-    (SELECT IFNULL(Closing_Balance, 0) AS Closing_Balance
-     FROM
-        (SELECT Closing_Balance * Quote AS Closing_Balance
-		 FROM account_statement
-		 JOIN nav_value 
-         ON DATE(account_statement.Statement_Date) = nav_value.Quote_Date
-		 WHERE Statement_Date = (SELECT MAX(account_statement.Statement_Date)
-		 						 FROM account_statement
-								 WHERE Account_ID = (SELECT Account_ID
-													 FROM account_auth
-													 WHERE Username = inputUsername)
-								)
-		 AND Account_ID = (SELECT Account_ID
-						   FROM account_auth
-						   WHERE Username = inputUsername)
-		 ) AS another_table
-	) AS previous_statement
-    
-JOIN
+set @current_NAV = 
+	(SELECT Quote
+	 FROM nav_value
+	 ORDER BY Quote_Date DESC
+	 LIMIT 1);
 
+set @most_recent_statement = 
+	(SELECT IFNULL(Closing_Balance, 0) AS Closing_Balance
+     FROM
+        (SELECT if(count(Closing_Balance) = 0, 0, Closing_Balance) * if(count(Quote) = 0, 0, Quote) AS Closing_Balance
+		 FROM account_statement
+		 JOIN nav_value
+         ON DATE(account_statement.Statement_Date) = nav_value.Quote_Date
+		 WHERE Statement_Date = 
+			(SELECT MAX(account_statement.Statement_Date)
+			 FROM account_statement
+			 WHERE Account_ID = 
+				(SELECT Account_ID
+				 FROM account_auth
+				 WHERE Username = inputUsername)
+			)
+		 AND Account_ID = 
+			(SELECT Account_ID
+			 FROM account_auth
+			 WHERE Username = inputUsername)
+		 ) AS another_table
+	);
+    
+set @transactions_sum = 
 	# Stock contribution of transactions from first of the month to current time.
-    (SELECT SUM((CASE Transactions.Transaction_Code
+    ifnull((SELECT ((CASE Transactions.Transaction_Code
 			 WHEN 'C' THEN Transactions.Transaction_Amount * Transactions.Quote
 			 WHEN 'D' THEN - Transactions.Transaction_Amount * Transactions.Quote END)) AS Account_Change
 	 FROM
@@ -45,8 +50,10 @@ JOIN
 						   FROM account_auth
 						   WHERE Username = inputUsername)
 		) AS Transactions
-	) AS table2 
-ON Account_Change;
+	), 0);
+	
+# Stock held by account * £ per stock. Relies on daily updated nav_value.
+SELECT (@transactions_sum + @most_recent_statement) AS balance;
 
 END $$
 DELIMITER ;

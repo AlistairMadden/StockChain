@@ -53,7 +53,7 @@ set @transactions_sum =
 	), 0);
 	
 # Stock held by account * £ per stock. Relies on daily updated nav_value.
-SELECT (@transactions_sum + @most_recent_statement) / @current_NAV;
+SELECT (@transactions_sum + @most_recent_statement) / @current_NAV AS balance;
 
 END $$
 DELIMITER ;

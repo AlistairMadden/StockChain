@@ -378,16 +378,16 @@ apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
 });
 
 apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
-    
-    // Check recipient is a valid user
-    sqlConnection.query("SELECT username FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+
+    // Is username in DB?
+    sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
         if (err) {
             console.log(err);
             return res.status(500).send({reason: "DB query error"});
         }
 
         if (rows.length === 0) {
-            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
+            return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
         }
 
         sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbResponse) {

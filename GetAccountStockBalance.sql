@@ -58,4 +58,4 @@ SELECT (@transactions_sum + @most_recent_statement) AS balance;
 END $$
 DELIMITER ;
 
-call get_account_balance("alistair.john.madden@gmail.com");
+call get_account_stock_balance("alistair.john.madden@gmail.com");

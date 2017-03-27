@@ -35,3 +35,5 @@ from
 ON CarriedForwardBalance.Account_ID = Transactions.Account_ID;
 END $$
 DELIMITER ;
+
+# call update_account_statement()

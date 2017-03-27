@@ -6,7 +6,7 @@
             var ProfileService = {};
 
             ProfileService.getProfileDetails = function() {
-                return $http.get('/user/profile').then(function(res) {
+                return $http.get('/api/profile').then(function(res) {
                     return res;
                 });
             };

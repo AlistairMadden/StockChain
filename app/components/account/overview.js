@@ -5,8 +5,8 @@
     angular.module('components.overview', [])
         .controller('overviewController', function ($scope, profileDetails, TransactionService, accountBalance) {
             $scope.profileDetails = profileDetails;
-            $scope.currencyBalance = Math.trunc(accountBalance.currency.balance * 100) / 100;
-            $scope.stockBalance = Math.trunc(accountBalance.stock.balance * 100) / 100;
+            $scope.currencyBalance = accountBalance.currency.balance;
+            $scope.stockBalance = accountBalance.stock.balance;
 
             $scope.transactionDetails = {};
 
@@ -41,6 +41,9 @@
                                         $scope.submitMessages.transactionSuccess = true;
                                     }
                                 }).catch(function (err) {
+
+                                    console.error(err);
+
                                 if (err.data.errCode === "AMT_ERR") {
                                     $scope.amountError = true;
                                     $scope.amountErrorMessage = err.data.reason;

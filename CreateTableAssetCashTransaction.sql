@@ -5,4 +5,5 @@ CREATE table asset_cash_transaction(
 	Transaction_DateTime TIMESTAMP NOT NULL,
 	Transaction_Amount decimal(15,2) not null,
     Transaction_Code varchar(3) not null,
+    Counterparty_ID INT unsigned not null,
 	PRIMARY KEY(Transaction_ID))

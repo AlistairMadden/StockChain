@@ -4,6 +4,7 @@
   "description": "A blockchain based trading application",
   "main": "server.js",
   "scripts": {
+    "start": "docker-compose -f ./openchain/docker-compose.yml up -d && node server.js",
     "test": "mysql -u root -p < \"C:\\Users\\Alistair\\Google Drive\\StockChain\\StockChain\\stockchain_openchain_backup.sql\" && node testServer.js"
   },
   "author": "",
@@ -26,6 +27,7 @@
     "morgan": "^1.7.0",
     "mysql": "^2.12.0",
     "node-schedule": "^1.2.0",
+    "openchain": "^0.2.4",
     "passport": "^0.3.2",
     "passport-local": "^1.0.0",
     "path": "^0.12.7"

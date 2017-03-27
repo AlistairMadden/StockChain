@@ -9,9 +9,20 @@ var express = require('express'),
     fs = require('fs'),
     appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
     bcrypt = require('bcrypt'),
-    schedule = require("node-schedule");
+    schedule = require("node-schedule"),
+    openchain = require("openchain"),
+    bitcore = require("bitcore-lib");
 
 const saltRounds = 10;
+
+
+/*
+  Openchain Setup
+ */
+
+// Load a private key
+var privateKey = new bitcore.HDPrivateKey(appDetails.openchainKey);
+
 
 /*
   DB Setup
@@ -31,9 +42,11 @@ sqlConnection.connect(function(err){
     }
 });
 
+
 /*
   Schedule a job to run and update the internal statements daily at 16:40
  */
+
 var rule = new schedule.RecurrenceRule();
 rule.hour = 16;
 rule.minute = 40;
@@ -115,9 +128,11 @@ function updateNavValue() {
     })
 }
 
+
 /*
   HTTPS Setup
 */
+
 var https = require('https');
 var httpsPort = 3443;
 
@@ -125,16 +140,23 @@ var options = {
     key: fs.readFileSync(appDetails.httpsKey),
     cert: fs.readFileSync(appDetails.httpsCert)
 };
+
 var secureServer = https.createServer(options, app).listen(httpsPort);
 
 app.set('port_https', httpsPort);
 
+// Redirect all insecure requests
 app.all('*', function(req, res, next) {
     if (req.secure) {
         return next();
     }
     res.redirect('https://' + req.hostname + ':' + app.get('port_https') + req.url);
 });
+
+
+/*
+  Express Setup
+ */
 
 // Make files in app directory available
 app.use(express.static(__dirname + '/app'));
@@ -242,7 +264,6 @@ function handleAuthenticationResponse(err, user, req, res) {
     }
 }
 
-// log out route
 apiRoutes.get('/logout', function(req, res) {
     // destroy the user's session to log them out
     // will be re-created next request
@@ -255,9 +276,12 @@ apiRoutes.post('/signup', function (req, routeRes) {
 
     bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
 
+        var newPrivateKey = new bitcore.HDPrivateKey();
+
         // create a new simple user - make sure on sign up, username is transformed to lower case. Similar check on
         // login
-        var user = {Username: req.body.username.toLocaleLowerCase(), Password_Hash: hash};
+        var user = {Username: req.body.username.toLocaleLowerCase(), Password_Hash: hash, Openchain_Key:
+            newPrivateKey.xprivkey};
 
         // insert user (automatic sanitisation)
         sqlConnection.query("INSERT INTO account_auth SET ?", user, function(err) {
@@ -272,11 +296,140 @@ apiRoutes.post('/signup', function (req, routeRes) {
                 }
             }
             else {
-                // also login
-                authenticate(req, routeRes, handleAuthenticationResponse);
+                var address = newPrivateKey.publicKey.toAddress();
+                var newCustomerEmail = req.body.username.toLocaleLowerCase().replace("@", ",");
+
+                // Calculate the accounts corresponding to the private key
+                var dataPath = "/aka/" + newCustomerEmail + "/";
+                var recordName = "goto";
+                var storedData = "/users/" + address + "/";
+
+                // Debugging info
+                console.log("Account path: " + dataPath);
+                console.log("Record name: " + recordName);
+
+                // Create an Openchain client and signer
+                var client = new openchain.ApiClient("http://localhost:8080/");
+                var signer = new openchain.MutationSigner(privateKey);
+
+                // Initialize the client
+                client.initialize()
+                    .then(function () {
+                        // Retrieve the record being modified
+                        return client.getDataRecord(dataPath, recordName)
+                    })
+                    .then(function (dataRecord) {
+                        // Encode the data into a ByteBuffer
+                        var newValue = openchain.encoding.encodeString(storedData);
+
+                        console.log(openchain.encoding.decodeString(dataRecord.key));
+
+                        // Create a new transaction builder
+                        return new openchain.TransactionBuilder(client)
+                        // Add the key to the transaction builder
+                            .addSigningKey(signer)
+                            // Modify the record
+                            .addRecord(dataRecord.key, newValue, dataRecord.version)
+                            // Submit the transaction
+                            .submit();
+                    })
+                    .then(function (result) {
+
+                        console.log(result);
+
+                        // Create another transaction to modify the account permissions
+                        recordName = "acl";
+                        storedData = openchain.encoding.encodeString("[{\"subjects\": [ { \"addresses\": [ ], \"required\": 0 } ],\"permissions\": { \"account_modify\": \"Permit\", \"account_create\": \"Permit\" }},{\"subjects\": [ { \"addresses\": [" + address + " ], \"required\": 1 } ],\"permissions\": { \"account_spend\": \"Permit\" }}]")
+
+                        // Initialize the client
+                        client.initialize()
+                            .then(function () {
+                                // Retrieve the record being modified
+                                return client.getDataRecord(dataPath, recordName)
+                            })
+                            .then(function (dataRecord) {
+                                // Encode the data into a ByteBuffer
+                                var newValue = openchain.encoding.encodeString(storedData);
+
+                                console.log(openchain.encoding.decodeString(dataRecord.key));
+
+                                // Create a new transaction builder
+                                return new openchain.TransactionBuilder(client)
+                                // Add the key to the transaction builder
+                                    .addSigningKey(signer)
+                                    // Modify the record
+                                    .addRecord(dataRecord.key, newValue, dataRecord.version)
+                                    // Submit the transaction
+                                    .submit();
+                            })
+                            .then(function (result) {
+
+                                console.log(result);
+
+                                // also login
+                                authenticate(req, routeRes, handleAuthenticationResponse);
+                            });
+                    }, function (err) {
+                        console.log(err);
+                    });
             }
         });
     });
+});
+
+apiRoutes.post("/addFunds", restrict, function (req, res) {
+    sqlConnection.query("SELECT Openchain_Key FROM account_auth WHERE username = ?", req.session.user, deriveAddress);
+
+    function deriveAddress(err, rows) {
+        if (err) {
+            console.error(err);
+            res.status(500).send({reason: "DB query error"})
+        }
+        else {
+            var userPrivateKey = bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
+
+            var walletPath = "/user/" + userPrivateKey.publicKey.toAddress() + "/";
+            var issuancePath = "/stockchain/";
+            var assetPath = "/asset/unit/";
+
+            // Corresponds to £100.00 with a nav of 1
+            var issuanceAmount = 10000;
+
+            // Create an Openchain client and signer
+            var client = new openchain.ApiClient("http://localhost:8080/");
+            var signer = new openchain.MutationSigner(privateKey);
+
+            // Initialize the client
+            client.initialize()
+                .then(function () {
+                    // Create a new transaction builder
+                    return new openchain.TransactionBuilder(client)
+                    // Add the key to the transaction builder
+                        .addSigningKey(signer)
+                        // Take 10000 units of the asset from the issuance path
+                        .updateAccountRecord(issuancePath, assetPath, -issuanceAmount);
+                })
+                .then(function (transactionBuilder) {
+                    // Add 10000 units of the asset to the target wallet path
+                    return transactionBuilder.updateAccountRecord(walletPath, assetPath, issuanceAmount);
+                })
+                .then(function (transactionBuilder) {
+                    // Submit the transaction
+                    return transactionBuilder.submit();
+                })
+                .then(function (result) {
+                    sqlConnection.query("call purchase_units(?, ?)", [issuanceAmount/100, userPrivateKey.xprivkey], function (err) {
+                        if (err) {
+                            console.error(err);
+                            res.status(500).send({reason: "DB query error"});
+                        }
+                        else {
+                            res.status(200).send();
+                        }
+                    });
+                });
+        }
+    }
 });
 
 /**
@@ -312,7 +465,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
     }
 
     // Check recipient is a valid user
-    sqlConnection.query("SELECT username FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
         if (err) {
             console.log(err);
             return res.status(500).send({reason: "DB query error"});
@@ -322,43 +475,112 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
             return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
         }
 
-        // Look up current balance in session store (but for now, just look up direct from sql db)
-        sqlConnection.query("CALL get_account_balance(?)", req.session.user, function(err, rows) {
+        var recipientKey = new bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
+        console.log(recipientKey);
+
+        sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
             if (err) {
-                console.error(err);
-                return res.status(500).send({reason: "Error fetching account statement from DB"});
+                console.log(err);
+                return res.status(500).send({reason: "DB query error"});
             }
 
-            // Not enough money in account
-            if (rows[0][0].balance < req.body.amount) {
-                return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
-                req.body.username, errCode: "AMT_ERR"});
+            if (rows.length === 0) {
+                return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
             }
 
-            sqlConnection.query("CALL make_transaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
-                if (err) {
-                    console.error(err);
-                    return res.status(500).send({reason: "Error writing transaction to DB"});
-                }
+            var client = new openchain.ApiClient("http://localhost:8080/");
+            var userPrivateKey = new bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
+            var address = userPrivateKey.publicKey.toAddress();
 
-                sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbRes) {
-                    if (err) {
-                        console.error(err);
-                        return res.status(500).send({reason: "Error fetching updated currency balance"});
-                    }
-
-                    var currency = dbRes[0][0];
-
-                    sqlConnection.query("call get_account_stock_balance(?)", req.session.user, function (err, dbRes) {
+            client.getAccountRecord(
+                // Account path
+                "/user/" + address + "/",
+                // Asset path
+                "/asset/unit/")
+                .then(function (result) {
+                    sqlConnection.query("select Quote from nav_value order by Quote_Date desc limit 1", function (err, rows) {
                         if (err) {
                             console.error(err);
-                            return res.status(500).send({reason: "Error fetching updated stock balance"});
+                            res.status(500).send({reason: "Problem fetching NAV from DB"});
                         }
+                        else {
 
-                        res.status(200).send({"currency": currency, "stock": dbRes[0][0]});
+                            var currencyBalance = rows[0].Quote * result.balance/100;
+
+                            // Not enough money in account
+                            if (currencyBalance < req.body.amount) {
+                                return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
+                                req.body.username, errCode: "AMT_ERR", amount: req.body.amount});
+                            }
+
+                            var issuancePath = "/user/" + userPrivateKey.publicKey.toAddress() + "/";
+                            var walletPath = "/user/" + recipientKey.publicKey.toAddress() + "/";
+                            var assetPath = "/asset/unit/";
+
+                            // May not play nicely without proper decimal support...
+                            var issuanceAmount = req.body.amount * 100/rows[0].Quote;
+
+                            // Create an Openchain client and signer
+                            var client = new openchain.ApiClient("http://localhost:8080/");
+                            var signer = new openchain.MutationSigner(privateKey);
+
+                            // Initialize the client
+                            client.initialize()
+                                .then(function () {
+                                    // Create a new transaction builder
+                                    return new openchain.TransactionBuilder(client)
+                                    // Add the key to the transaction builder
+                                        .addSigningKey(signer)
+                                        // Take units of the asset from the issuance path
+                                        .updateAccountRecord(issuancePath, assetPath, -issuanceAmount);
+                                }, function (err) {
+                                    console.error(err);
+                                    return res.status(500);
+                                })
+                                .then(function (transactionBuilder) {
+                                    // Add units of the asset to the target wallet path
+                                    return transactionBuilder.updateAccountRecord(walletPath, assetPath, issuanceAmount);
+                                }, function (err) {
+                                    console.error(err);
+                                    return res.status(500);
+                                })
+                                .then(function (transactionBuilder) {
+                                    // Submit the transaction
+                                    return transactionBuilder.submit();
+                                }, function (err) {
+                                    console.error(err);
+                                    return res.status(500);
+                                })
+                                .then(function (result) {
+                                    // Functionify?
+                                    client.getAccountRecord(
+                                        // Account path
+                                        "/user/" + address + "/",
+                                        // Asset path
+                                        "/asset/unit/")
+                                        .then(function (result) {
+                                            sqlConnection.query("select Quote from nav_value order by Quote_Date desc limit 1", function (err, rows) {
+                                                if (err) {
+                                                    console.error(err);
+                                                    res.status(500).send({reason: "Problem fetching NAV from DB"});
+                                                }
+                                                else {
+                                                    var currencyBalance = rows[0].Quote * result.balance/100;
+                                                    res.status(200).send({
+                                                        stock: {balance: result.balance.toString()},
+                                                        // Placeholder
+                                                        currency: {balance: currencyBalance.toString()}
+                                                    });
+                                                }
+                                            });
+                                        });
+                                }, function (err) {
+                                    console.error(err);
+                                    return res.status(500);
+                                });
+                        }
                     });
                 });
-            });
         });
     });
 });
@@ -390,45 +612,46 @@ apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
             return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
         }
 
-        sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbResponse) {
-            if (err) {
-                console.error(err);
-                return res.status(500).send({reason: "Error fetching transactions from DB"});
-            }
+        // Stop hard coding this
+        var client = new openchain.ApiClient("http://localhost:8080/");
 
-            var preferredCurrencyBalance = dbResponse[0][0];
+        var userPrivateKey = bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
+        var address = userPrivateKey.publicKey.toAddress();
 
-            sqlConnection.query("call get_account_stock_balance(?)", req.session.user, function (err, dbResponse) {
-                if (err) {
-                    console.error(err);
-                    return res.status(500).send({reason: "Error fetching transactions from DB"});
-                }
+        client.getAccountRecord(
+            // Account path
+            "/user/" + address + "/",
+            // Asset path
+            "/asset/unit/")
+            .then(function (result) {
+                console.log("Balance: " + result.balance.toString());
 
-                console.log(preferredCurrencyBalance);
-                console.log(dbResponse[0][0]);
-
-                res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
-            })
-        })
+                sqlConnection.query("select Quote from nav_value order by Quote_Date desc limit 1", function (err, rows) {
+                    if (err) {
+                        console.error(err);
+                        res.status(500).send({reason: "Problem fetching NAV from DB"});
+                    }
+                    else {
+                        var currencyBalance = rows[0].Quote * result.balance/100;
+                        res.status(200).send({
+                            stock: {balance: result.balance.toString()},
+                            // Placeholder
+                            currency: {balance: currencyBalance.toString()}
+                        });
+                    }
+                });
+            });
     });
 });
 
-// apply the routes to the web server with the prefix /api
-app.use('/api', apiRoutes);
-
-/*
-  All other routes
- */
-
-var protectedRoutes = express.Router();
-
-// I need help from callback hell
-protectedRoutes.get('/profile', restrict, function (req, res) {
+apiRoutes.get('/profile', restrict, function (req, res) {
     res.send({username: req.session.user});
 });
 
-app.use('/user', protectedRoutes);
+// Apply the routes to the web server with the prefix /api
+app.use('/api', apiRoutes);
 
+// Homepage redirect
 app.get('/*', function(req, res) {
     res.sendFile(path.join(__dirname + '/index.html'));
 });

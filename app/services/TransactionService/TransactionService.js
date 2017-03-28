@@ -30,6 +30,12 @@
                 })
             };
 
+            transactionService.addFundTransation = function() {
+                return $http.post('/api/addFunds', {}).then(function (res) {
+                    return res;
+                })
+            };
+
             return transactionService;
         })
 })();

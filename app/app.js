@@ -2,7 +2,8 @@
     'use strict';
 
     angular.module('stockChain', ['ui.router', 'components.home', 'components.login',
-        'components.signup', 'components.overview', 'components.transactions', 'components.account', 'api.AuthService', 'api.ProfileService',
+        'components.signup', 'components.overview', 'components.transactions', 'components.account',
+        'components.purchaseUnits','api.AuthService', 'api.ProfileService',
         'api.TransactionService'
     ])
         .config(function ($urlRouterProvider, $stateProvider, $locationProvider, $httpProvider) {
@@ -72,6 +73,20 @@
                             return TransactionService.getAccountTransactions().then(function (res) {
                                 return res.data;
                             })
+                        }
+                    }
+                })
+                .state('account.purchaseUnits', {
+                    url: '/invest',
+                    templateUrl: 'components/account/purchaseUnits/purchaseUnits.html',
+                    controller: 'purchaseUnitsController',
+                    resolve: {
+                        profileDetails: function (ProfileService, $state) {
+                            return ProfileService.getProfileDetails().then(function (res) {
+                                return res.data;
+                            }).catch(function () {
+                                $state.go('website.login');
+                            });
                         }
                     }
                 })

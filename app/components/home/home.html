@@ -12,11 +12,28 @@
       </li>
     </ul>
     <div class="account-ctrl-btn-div">
-      <button id="login-btn" class="btn btn-outline-success" ui-sref="website.login" data-toggle="collapse" data-target=".navbar-collapse">
+      <button class="btn btn-outline-success login-btn" ui-sref="website.login" data-toggle="collapse" data-target=".navbar-collapse">
         Log in
       </button>
-      <span id="or">or</span>
-      <button id="signin-btn" class="btn btn-outline-primary" data-toggle="collapse" data-target=".navbar-collapse" ui-sref="website.signup">
+      <span class="or">or</span>
+      <button class="btn btn-outline-primary signin-btn" data-toggle="collapse" data-target=".navbar-collapse" ui-sref="website.signup">
+        Sign up
+      </button>
+    </div>
+  </div>
+
+  <div class="navbar-collapse collapse" id="navbar-no-collapse">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="/">About<span class="sr-only"> (current)</span></a>
+      </li>
+    </ul>
+    <div class="account-ctrl-btn-div">
+      <button class="btn btn-outline-success login-btn" ui-sref="website.login">
+        Log in
+      </button>
+      <span class="or">or</span>
+      <button class="btn btn-outline-primary signin-btn" ui-sref="website.signup">
         Sign up
       </button>
     </div>

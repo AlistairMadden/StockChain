@@ -17,7 +17,19 @@ body {
   line-height: 2.35;
 }
 
-.navbar-collapse.show{
+@media (max-width: 991px) {
+  #navbar-no-collapse{
+    display: none!important;
+  }
+}
+
+@media (min-width: 992px) {
+  #navbar-links{
+    display: none!important;
+  }
+}
+
+#navbar-links {
   margin-bottom: 0.5rem;
 }
 
@@ -30,7 +42,12 @@ body {
 /* Log in and sign up */
 #login-container, #signup-container {
   max-width: 500px;
-  margin-top: 6.5rem;
+  margin-top: 3.4rem;
+}
+
+.page-title {
+  padding-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .form-warning {

@@ -3,14 +3,6 @@ body {
 }
 
 /* Navbar */
-.main-navbar {
-  background-color: #eeeeee;
-}
-
-#hamburger-btn {
-  border: 0;
-}
-
 .or {
   color: #fff;
   margin: 0 0.5rem;
@@ -29,6 +21,16 @@ body {
   }
 }
 
+.logo {
+  height: 2rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.no-collapse-nav-item {
+  margin-right: 1rem;
+}
+
 #navbar-links {
   margin-bottom: 0.5rem;
 }
@@ -37,6 +39,19 @@ body {
   display: flex;
   flex-flow: row wrap;
   justify-content: flex-start;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.navbar-toggler {
+  border: 0;
 }
 
 /* Log in and sign up */

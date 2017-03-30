@@ -280,6 +280,22 @@ apiRoutes.post('/signup', function (req, routeRes) {
 });
 
 /**
+ * Add funds to the current account. For testing this route simply adds £100
+ * to the invoking account when asked.
+ */
+apiRoutes.post("/addFunds", restrict, function (req, res) {
+    sqlConnection.query("call purchase_units(100, ?)", req.session.user, function (err, rows) {
+        if (err) {
+            console.error(err);
+            res.status(500).send({reason: "Internal DB error"});
+        }
+        else {
+            res.status(200).send();
+        }
+    })
+});
+
+/**
  * Route used to make a transaction between user accounts
  *
  *
@@ -378,16 +394,16 @@ apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
 });
 
 apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
-    
-    // Check recipient is a valid user
-    sqlConnection.query("SELECT username FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+
+    // Is username in DB -- would this ever happen?
+    sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
         if (err) {
             console.log(err);
             return res.status(500).send({reason: "DB query error"});
         }
 
         if (rows.length === 0) {
-            return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
+            return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
         }
 
         sqlConnection.query("call get_account_balance(?)", req.session.user, function (err, dbResponse) {
@@ -403,9 +419,6 @@ apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
                     console.error(err);
                     return res.status(500).send({reason: "Error fetching transactions from DB"});
                 }
-
-                console.log(preferredCurrencyBalance);
-                console.log(dbResponse[0][0]);
 
                 res.status(200).send({"currency": preferredCurrencyBalance, "stock": dbResponse[0][0]});
             })

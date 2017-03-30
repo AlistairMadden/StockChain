@@ -7,15 +7,24 @@ body {
   background-color: #eeeeee;
 }
 
+#hamburger-btn {
+  border: 0;
+}
+
+#or {
+  color: #fff;
+  margin: 0 0.5rem;
+  line-height: 2.35;
+}
+
+.navbar-collapse.show{
+  margin-bottom: 0.5rem;
+}
+
 .account-ctrl-btn-div {
   display: flex;
   flex-flow: row wrap;
-  justify-content: flex-end;
-  align-self: flex-end;
-}
-
-#signin-btn {
-  margin-left: 0.5rem;
+  justify-content: flex-start;
 }
 
 /* Log in and sign up */
@@ -105,14 +114,15 @@ body {
 }
 
 #main-navbar {
-  border-radius: 0;
+  /*border-radius: 0;*/
   background-image: url("assets/img/pw_maze_black_@2X_mod2.png");
+  /*background-color: #292b2c!important;*/
   top: 0;
   z-index: 100;
   position: fixed;
   width: 100%;
-  height: 3.5rem;
-  display: flex;
+  /*height: 3.5rem;*/
+  /*display: flex;*/
 }
 
 body {

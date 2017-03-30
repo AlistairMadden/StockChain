@@ -30,7 +30,7 @@ CREATE TABLE `account_auth` (
   `Password_Hash` char(60) NOT NULL,
   PRIMARY KEY (`Account_ID`),
   UNIQUE KEY `Username` (`Username`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,6 +39,7 @@ CREATE TABLE `account_auth` (
 
 LOCK TABLES `account_auth` WRITE;
 /*!40000 ALTER TABLE `account_auth` DISABLE KEYS */;
+INSERT INTO `account_auth` VALUES (5,'alistair.john.madden@gmail.com','$2a$10$VkpIrl7tuiWbwADA5QuI5esKMc1Vl5e1d2jWOGFTXjdQD2eYYuZ56'),(6,'alistair.madden@me.com','$2a$10$TfIakClf4ktpegidz9NHFOJPmuqJMsP43wd8oJ.eLW7a/f/Hdn7lS');
 /*!40000 ALTER TABLE `account_auth` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -115,6 +116,7 @@ CREATE TABLE `asset_cash_statement` (
 
 LOCK TABLES `asset_cash_statement` WRITE;
 /*!40000 ALTER TABLE `asset_cash_statement` DISABLE KEYS */;
+INSERT INTO `asset_cash_statement` VALUES (0,'2017-03-17',0.00);
 /*!40000 ALTER TABLE `asset_cash_statement` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -164,6 +166,7 @@ CREATE TABLE `asset_share_statement` (
 
 LOCK TABLES `asset_share_statement` WRITE;
 /*!40000 ALTER TABLE `asset_share_statement` DISABLE KEYS */;
+INSERT INTO `asset_share_statement` VALUES (0,'2017-03-17',0.00);
 /*!40000 ALTER TABLE `asset_share_statement` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -214,6 +217,7 @@ CREATE TABLE `nav_value` (
 
 LOCK TABLES `nav_value` WRITE;
 /*!40000 ALTER TABLE `nav_value` DISABLE KEYS */;
+INSERT INTO `nav_value` VALUES ('2017-03-15',1.000000),('2017-03-17',1.000000);
 /*!40000 ALTER TABLE `nav_value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -262,7 +266,7 @@ set @most_recent_statement =
 	);
     
 set @transactions_sum = 
-	
+	# Stock contribution of transactions from first of the month to current time.
     ifnull((SELECT ((CASE Transactions.Transaction_Code
 			 WHEN 'C' THEN Transactions.Transaction_Amount * Transactions.Quote
 			 WHEN 'D' THEN - Transactions.Transaction_Amount * Transactions.Quote END)) AS Account_Change
@@ -278,8 +282,8 @@ set @transactions_sum =
 		) AS Transactions
 	), 0);
 	
-
-SELECT (@transactions_sum + @most_recent_statement) / @current_NAV;
+# Stock held by account * £ per stock. Relies on daily updated nav_value.
+SELECT (@transactions_sum + @most_recent_statement) / @current_NAV AS balance;
 
 END ;;
 DELIMITER ;
@@ -300,32 +304,37 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_account_stock_balance`(IN inputUsername VARCHAR(50))
 BEGIN
 
+set @current_NAV = 
+	(SELECT Quote
+	 FROM nav_value
+	 ORDER BY Quote_Date DESC
+	 LIMIT 1);
 
-SELECT Closing_Balance + IFNULL(Account_Change, 0) as stock_balance
-FROM
-	
-    (SELECT IFNULL(Closing_Balance, 0) AS Closing_Balance
+set @most_recent_statement = 
+	(SELECT IFNULL(Closing_Balance, 0) AS Closing_Balance
      FROM
-        (SELECT Closing_Balance * Quote AS Closing_Balance
+        (SELECT if(count(Closing_Balance) = 0, 0, Closing_Balance) * if(count(Quote) = 0, 0, Quote) AS Closing_Balance
 		 FROM account_statement
-		 JOIN nav_value 
+		 JOIN nav_value
          ON DATE(account_statement.Statement_Date) = nav_value.Quote_Date
-		 WHERE Statement_Date = (SELECT MAX(account_statement.Statement_Date)
-		 						 FROM account_statement
-								 WHERE Account_ID = (SELECT Account_ID
-													 FROM account_auth
-													 WHERE Username = inputUsername)
-								)
-		 AND Account_ID = (SELECT Account_ID
-						   FROM account_auth
-						   WHERE Username = inputUsername)
+		 WHERE Statement_Date = 
+			(SELECT MAX(account_statement.Statement_Date)
+			 FROM account_statement
+			 WHERE Account_ID = 
+				(SELECT Account_ID
+				 FROM account_auth
+				 WHERE Username = inputUsername)
+			)
+		 AND Account_ID = 
+			(SELECT Account_ID
+			 FROM account_auth
+			 WHERE Username = inputUsername)
 		 ) AS another_table
-	) AS previous_statement
+	);
     
-JOIN
-
-	
-    (SELECT SUM((CASE Transactions.Transaction_Code
+set @transactions_sum = 
+	# Stock contribution of transactions from first of the month to current time.
+    ifnull((SELECT ((CASE Transactions.Transaction_Code
 			 WHEN 'C' THEN Transactions.Transaction_Amount * Transactions.Quote
 			 WHEN 'D' THEN - Transactions.Transaction_Amount * Transactions.Quote END)) AS Account_Change
 	 FROM
@@ -338,8 +347,10 @@ JOIN
 						   FROM account_auth
 						   WHERE Username = inputUsername)
 		) AS Transactions
-	) AS table2 
-ON Account_Change;
+	), 0);
+	
+# Stock held by account * £ per stock. Relies on daily updated nav_value.
+SELECT (@transactions_sum + @most_recent_statement) AS balance;
 
 END ;;
 DELIMITER ;
@@ -530,12 +541,12 @@ BEGIN
 
 set @update_datetime = NOW();
 
-# Set the correct statement datetime
+
 set @update_datetime = if(time(@update_datetime) < "16:40:00", 
 						  date_format(date_sub(@update_datetime, interval 1 day), "%Y-%m-%d 16:40:00"), 
                           date_format(@update_datetime, "%Y-%m-%d 16:40:00"));
 
-# The total of all assets held by the fund
+
 set @total_assets = (select asset_share_statement.Closing_Balance 
 					 from asset_share_statement 
 					 where asset_share_statement.Statement_Date = date(@update_datetime)) + 
@@ -543,7 +554,7 @@ set @total_assets = (select asset_share_statement.Closing_Balance
 					 from asset_cash_statement 
 					 where asset_cash_statement.Statement_Date = date(@update_datetime));
 
-# Number of units of the fund that have been issued
+
 set @units_issued = (select SUM(account_transaction.Transaction_Amount * Quote) 
 					 from account_transaction
 					 join nav_value
@@ -552,7 +563,7 @@ set @units_issued = (select SUM(account_transaction.Transaction_Amount * Quote)
 
 insert into nav_value
 
-# If no units issued or no assets
+
 select date(@update_datetime), ifnull(@units_issued/@total_assets, 1);
 
 END ;;
@@ -571,4 +582,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-15 19:39:51
+-- Dump completed on 2017-03-19 16:01:03

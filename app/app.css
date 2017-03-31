@@ -28,8 +28,14 @@ body {
   max-width: 3rem;
 }
 
+.nav-item {
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
 .no-collapse-nav-item {
   margin-right: 1rem;
+  margin-bottom: 0;
 }
 
 #navbar-links {

@@ -122,10 +122,8 @@ var https = require('https');
 var httpsPort = 3443;
 
 var options = {
-    key: fs.readFileSync(appDetails.httpsKey),
-    cert: fs.readFileSync(appDetails.httpsCert)
 };
-var secureServer = https.createServer(options, app).listen(httpsPort);
+https.createServer(options, app).listen(httpsPort);
 
 app.set('port_https', httpsPort);
 

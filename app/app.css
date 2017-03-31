@@ -25,6 +25,7 @@ body {
   height: 2rem;
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
+  max-width: 3rem;
 }
 
 .no-collapse-nav-item {

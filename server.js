@@ -136,9 +136,6 @@ app.all('*', function(req, res, next) {
     res.redirect('https://' + req.hostname + req.url);
 });
 
-// Make files in static directory available
-app.use(express.static(__dirname + '/static'));
-
 // Make files in app directory available
 app.use(express.static(__dirname + '/app'));
 

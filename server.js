@@ -122,8 +122,10 @@ var https = require('https');
 var httpsPort = 3443;
 
 var options = {
+    key: fs.readFileSync(appDetails.httpsKey),
+    cert: fs.readFileSync(appDetails.httpsCert)
 };
-https.createServer(options, app).listen(httpsPort);
+var secureServer = https.createServer(options, app).listen(httpsPort);
 
 app.set('port_https', httpsPort);
 
@@ -133,6 +135,9 @@ app.all('*', function(req, res, next) {
     }
     res.redirect('https://' + req.hostname + req.url);
 });
+
+// Make files in static directory available
+app.use(express.static(__dirname + '/static'));
 
 // Make files in app directory available
 app.use(express.static(__dirname + '/app'));

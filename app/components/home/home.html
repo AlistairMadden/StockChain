@@ -1,9 +1,16 @@
 <nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse" id="main-navbar">
-  <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbar-links"
-          aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation" id="hamburger-btn">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <a class="navbar-brand" href="/">StockChain</a>
+
+  <div class="header">
+    <button class="navbar-toggler hidden" type="button">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <object type="image/svg+xml" data="assets/img/icon.svg" class="logo"></object>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-links"
+            aria-controls="navbar-links" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </div>
+
 
   <div class="navbar-collapse collapse" id="navbar-links" aria-expanded="false">
     <ul class="navbar-nav mr-auto">
@@ -12,11 +19,28 @@
       </li>
     </ul>
     <div class="account-ctrl-btn-div">
-      <button id="login-btn" class="btn btn-outline-success" ui-sref="website.login" data-toggle="collapse" data-target=".navbar-collapse">
+      <button class="btn btn-outline-success login-btn" ui-sref="website.login" data-toggle="collapse" data-target=".navbar-collapse">
         Log in
       </button>
-      <span id="or">or</span>
-      <button id="signin-btn" class="btn btn-outline-primary" data-toggle="collapse" data-target=".navbar-collapse" ui-sref="website.signup">
+      <span class="or">or</span>
+      <button class="btn btn-outline-primary signin-btn" data-toggle="collapse" data-target=".navbar-collapse" ui-sref="website.signup">
+        Sign up
+      </button>
+    </div>
+  </div>
+
+  <div class="navbar-collapse collapse" id="navbar-no-collapse">
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item active no-collapse-nav-item">
+        <a class="nav-link" href="/">About<span class="sr-only"> (current)</span></a>
+      </li>
+    </ul>
+    <div class="account-ctrl-btn-div">
+      <button class="btn btn-outline-success login-btn" ui-sref="website.login">
+        Log in
+      </button>
+      <span class="or">or</span>
+      <button class="btn btn-outline-primary signin-btn" ui-sref="website.signup">
         Sign up
       </button>
     </div>

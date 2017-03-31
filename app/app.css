@@ -3,21 +3,36 @@ body {
 }
 
 /* Navbar */
-.main-navbar {
-  background-color: #eeeeee;
-}
-
-#hamburger-btn {
-  border: 0;
-}
-
-#or {
+.or {
   color: #fff;
   margin: 0 0.5rem;
   line-height: 2.35;
 }
 
-.navbar-collapse.show{
+@media (max-width: 991px) {
+  #navbar-no-collapse{
+    display: none!important;
+  }
+}
+
+@media (min-width: 992px) {
+  #navbar-links{
+    display: none!important;
+  }
+}
+
+.logo {
+  height: 2rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  max-width: 3rem;
+}
+
+.no-collapse-nav-item {
+  margin-right: 1rem;
+}
+
+#navbar-links {
   margin-bottom: 0.5rem;
 }
 
@@ -27,10 +42,28 @@ body {
   justify-content: flex-start;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.navbar-toggler {
+  border: 0;
+}
+
 /* Log in and sign up */
 #login-container, #signup-container {
   max-width: 500px;
-  margin-top: 6.5rem;
+  margin-top: 3.4rem;
+}
+
+.page-title {
+  padding-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .form-warning {

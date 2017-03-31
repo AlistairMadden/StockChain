@@ -64,7 +64,7 @@ body {
 /* Log in and sign up */
 #login-container, #signup-container {
   max-width: 500px;
-  margin-top: 3.4rem;
+  margin-top: 7rem;
 }
 
 .page-title {
@@ -96,7 +96,7 @@ body {
 
 /* Profile */
 .profile-container {
-  margin-top: 4.5rem;
+  margin-top: 7rem;
 }
 
 .amount-form-group {

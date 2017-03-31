@@ -133,7 +133,7 @@ app.all('*', function(req, res, next) {
     if (req.secure) {
         return next();
     }
-    res.redirect('https://' + req.hostname + req.url);
+    res.redirect('https://' + req.hostname + ":" + 3443 + req.url);
 });
 
 // Make files in app directory available

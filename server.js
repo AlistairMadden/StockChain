@@ -17,19 +17,32 @@ const saltRounds = 10;
   DB Setup
 */
 
-var sqlConnection = sql.createConnection({
+const sqlConnection = sql.createConnection({
     host: appDetails.sqlDbUrl,
     user: appDetails.sqlDbUser,
     password: appDetails.sqlDbPassword,
     database: appDetails.sqlDbName
 });
 
-// connect to the DB
-sqlConnection.connect(function(err){
-    if(err){
+// Handle connecting to database plus disconnection errors
+(function connectToDatabase() {
+    sqlConnection.connect(function(err){
+        if(err){
+            console.error(err);
+            // Wait 3 seconds before attempting to reconnect
+            setTimeout(connectToDatabase, 3000)
+        }
+    });
+
+    sqlConnection.on("error", function (err) {
         console.error(err);
-    }
-});
+        // Try to reconnect if a disconnection
+        if (err.code === "PROTOCOL_CONNECTION_LOST" || "ECONNRESET") {
+            connectToDatabase();
+        }
+    })
+})();
+
 
 /*
   Schedule a job to run and update the internal statements daily at 16:40

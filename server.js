@@ -194,8 +194,10 @@ apiRoutes.post('/login', function (req, res) {
  */
 function authenticate(req, res, callback) {
 
+    const userRequestedUsername = req.body.username.toLocaleLowerCase();
+
     // Is username in DB?
-    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", userRequestedUsername, function (err, rows) {
         if (err) {
             // DB error
             return callback(err, null, req, res);
@@ -207,7 +209,7 @@ function authenticate(req, res, callback) {
                     return callback(err, null, req, res);
                 }
                 else if (matchingHash) {
-                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
+                    return callback(null, userRequestedUsername, req, res);
                 }
                 else {
                     err = {};

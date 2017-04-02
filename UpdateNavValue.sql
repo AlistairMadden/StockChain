@@ -10,17 +10,20 @@ BEGIN
 set @update_datetime = NOW();
 
 # Set the correct statement datetime
+# -if before 16:40, subtract a day
+# -else leave unchanged
 set @update_datetime = if(time(@update_datetime) < "16:40:00", 
 						  date_format(date_sub(@update_datetime, interval 1 day), "%Y-%m-%d 16:40:00"), 
                           date_format(@update_datetime, "%Y-%m-%d 16:40:00"));
 
 # The total of all assets held by the fund
+# --should probably handle case where no rows are returned
 set @total_assets = (select asset_share_statement.Closing_Balance 
 					 from asset_share_statement 
-					 where asset_share_statement.Statement_Date = date(@update_datetime)) + 
+					 where asset_share_statement.Statement_Date = date(date_sub(@update_datetime, interval 1 day))) + 
 					(select asset_cash_statement.Closing_Balance 
 					 from asset_cash_statement 
-					 where asset_cash_statement.Statement_Date = date(@update_datetime));
+					 where asset_cash_statement.Statement_Date = date(date_sub(@update_datetime, interval 1 day)));
 
 # Number of units of the fund that have been issued
 set @units_issued = (select SUM(account_transaction.Transaction_Amount * Quote) 

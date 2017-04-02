@@ -168,3 +168,79 @@ input::-webkit-inner-spin-button {
 input[type='number'] {
   -moz-appearance:textfield;
 }
+
+/* Transactions */
+.vertical-transaction-holder {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-transaction-holder {
+  display: flex;
+}
+
+.transaction {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.transaction-field {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.table-column {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.table-column:last-child {
+  margin-right: 0;
+}
+
+.table-column-amount, .table-column-date {
+  text-align: right;
+}
+
+.field-value {
+  -ms-word-break: break-all;
+  word-break: break-all;
+
+  /* Non standard for WebKit */
+  word-break: break-word;
+
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  hyphens: auto;
+
+  text-align: justify;
+}
+
+.table-field-value {
+  padding: 0 0.5rem;
+}
+
+.field-key {
+  margin-right: 0.5rem;
+}
+
+.table-field-key {
+  padding: 0.5rem;
+  background-color: #0b0b0b;
+  color: #fff;
+}
+
+@media (max-width: 517px) {
+  .table-transaction-holder {
+    display: none!important;
+  }
+}
+
+@media (min-width: 518px) {
+  .vertical-transaction-holder {
+    display: none!important;
+  }
+}

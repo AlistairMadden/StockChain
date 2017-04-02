@@ -74,6 +74,11 @@ body {
   width: 100%;
 }
 
+/* Welcome */
+.welcome-text {
+  font-size: 1.25rem;
+}
+
 /* Log in and sign up */
 #login-container, #signup-container {
   max-width: 500px;

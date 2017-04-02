@@ -1,7 +1,7 @@
 DROP PROCEDURE IF EXISTS `make_transaction`;
 
 DELIMITER $$
-create procedure make_transaction(IN fromUser VARCHAR(50), toUser VARCHAR(50), amount decimal(15,5))
+create procedure make_transaction(IN fromUser VARCHAR(254), toUser VARCHAR(254), amount decimal(15,5))
 # Insert two records into account_transaction (party, counter-party) to represent a transaction.
 
 begin

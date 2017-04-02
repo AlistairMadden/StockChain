@@ -1,44 +1,59 @@
 <div id="signup-container" class="container">
 
-  <h5 class="page-title">Sign Up</h5>
+  <h5 class="page-title">Sign Up for an Account</h5>
 
   <!-- Signup Form -->
   <form name="signupForm" ng-submit="signup(credentials)" novalidate>
 
     <!-- Email -->
-    <div class="form-group" ng-class="{'has-danger': signupForm.email.$invalid && signupForm.email.$touched}">
+    <div class="form-group" ng-class="{'has-danger': ((signupForm.email.$invalid && signupForm.email.$touched ||
+        error409) && !signupForm.email.focus)}">
       <label class="control-label" for="email">Email</label>
-      <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username" required>
-      <p ng-show="signupForm.email.$invalid && signupForm.email.$touched" class="has-danger form-warning">Please enter a
-        valid
-        email.</p>
+      <input id="email" type="email" class="form-control" name="email"
+             ng-model="credentials.username"
+             ng-focus="signupForm.email.focus=true; error409=false; incorrectSubmission=false"
+             ng-blur="signupForm.email.focus=false" required>
+      <p ng-show="signupForm.email.$invalid && signupForm.email.$touched && !signupForm.email.focus"
+         class="has-danger form-warning">
+        Please enter a valid email.
+      </p>
+      <p ng-show="error409" class="has-danger form-warning">
+        Sorry, it appears an account with the email {{credentials.username}} already exists.
+      </p>
     </div>
 
     <!-- Password -->
     <div class="form-group" ng-class="{'has-danger': signupForm.password.$invalid && signupForm.password.$touched}">
       <label class="control-label" for="password">Password</label>
-      <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
+      <input id="password" type="password" class="form-control" name="password"
+             ng-model="credentials.password"
+             ng-focus="incorrectSubmission=false"
              required>
     </div>
 
     <!-- Password Check make directive?-->
-    <div class="form-group last-form-group" ng-class="{'has-danger': (signupForm.passwordCheck.$invalid &&
-        signupForm.passwordCheck.$touched) || ((signupForm.passwordCheck.innerHTML !== signupForm.password.innerHTML) &&
-        signupForm.passwordCheck.$touched)}">
+    <div class="form-group last-form-group" ng-class="{'has-danger': signupForm.passwordCheck.$invalid &&
+        signupForm.passwordCheck.$touched && !signupForm.passwordCheck.focus}">
 
       <label class="control-label" for="confirmPassword">Confirm Password</label>
       <input id="confirmPassword" type="password" class="form-control" name="passwordCheck"
-             ng-model="credentials.confirmPassword" compare-to="credentials.password" required>
-      <p ng-show="(signupForm.passwordCheck.$invalid &&
-        signupForm.passwordCheck.$touched) || ((signupForm.passwordCheck.innerHTML !== signupForm.password.innerHTML) &&
-        signupForm.passwordCheck.$touched)" class="form-warning">The supplied passwords do not match.</p>
+             ng-model="credentials.confirmPassword"
+             compare-to="credentials.password"
+             ng-focus="signupForm.passwordCheck.focus=true; incorrectSubmission=false"
+             ng-blur="signupForm.passwordCheck.focus=false"
+             required>
+      <p ng-show="signupForm.passwordCheck.$invalid && signupForm.passwordCheck.$touched &&
+          !signupForm.passwordCheck.focus" class="form-warning">
+        The supplied passwords do not match.
+      </p>
     </div>
-
 
     <!-- Submit Button -->
     <button type="submit" class="btn btn-primary submit-btn">Sign up</button>
-    <span ng-show="incorrectSubmission"
-          class="has-danger">A field was filled out incorrectly. Please check for errors.</span>
+
+    <span ng-show="incorrectSubmission" class="has-danger">
+      A field was filled out incorrectly. Please check for errors.
+    </span>
 
   </form>
 

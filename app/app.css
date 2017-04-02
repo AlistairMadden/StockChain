@@ -65,6 +65,13 @@ body {
 .navbar-toggler:focus {
   outline: none;
 }
+
+#main-navbar {
+  background-image: url("assets/img/pw_maze_black_@2X_mod2.png");
+  top: 0;
+  z-index: 100;
+  position: fixed;
+  width: 100%;
 }
 
 /* Log in and sign up */

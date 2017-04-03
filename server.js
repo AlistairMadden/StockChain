@@ -17,7 +17,7 @@ const saltRounds = 10;
   DB Setup
 */
 
-const sqlConnection = sql.createConnection({
+var sqlConnection = sql.createConnection({
     host: appDetails.sqlDbUrl,
     user: appDetails.sqlDbUser,
     password: appDetails.sqlDbPassword,
@@ -36,6 +36,16 @@ const sqlConnection = sql.createConnection({
 
     sqlConnection.on("error", function (err) {
         console.error(err);
+
+        sqlConnection.destroy();
+
+        sqlConnection = sql.createConnection({
+            host: appDetails.sqlDbUrl,
+            user: appDetails.sqlDbUser,
+            password: appDetails.sqlDbPassword,
+            database: appDetails.sqlDbName
+        });
+
         // Try to reconnect if a disconnection
         if (err.code === "PROTOCOL_CONNECTION_LOST" || "ECONNRESET") {
             connectToDatabase();

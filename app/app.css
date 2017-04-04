@@ -87,7 +87,7 @@ body {
 
 .page-title {
   padding-top: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-warning {
@@ -113,8 +113,20 @@ body {
 }
 
 /* Profile */
-.profile-container {
+.view-container {
   margin-top: 7rem;
+}
+
+.module-container > h6 {
+  margin-bottom: 1rem;
+}
+
+.module-container > p {
+  margin-bottom: 0.5rem;
+}
+
+.module-container {
+  margin-bottom: 1.5rem;
 }
 
 .amount-form-group {

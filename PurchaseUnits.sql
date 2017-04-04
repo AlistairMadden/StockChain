@@ -1,7 +1,7 @@
 DROP PROCEDURE IF EXISTS `purchase_units`;
 
 DELIMITER $$
-create procedure purchase_units(in amount int, accountUsername varchar(50))
+create procedure purchase_units(in amount int, accountUsername varchar(254))
 # Adds funds equal to amount to the account specified by accountUsername. A double entry is made
 # in the asset_cash_transaction and account_transaction tables.
 
@@ -33,4 +33,4 @@ select @account_ID as Account_ID,
 END $$
 DELIMITER ;
 
-call purchase_units(50, "alistair.john.madden@gmail.com");
+# call purchase_units(50, "alistair.john.madden@gmail.com");

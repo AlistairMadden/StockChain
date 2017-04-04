@@ -1,19 +1,38 @@
-<div class="container profile-container">
-  <table class="table table-bordered">
-    <thead class="thead-inverse">
-      <tr>
-        <th>To/From</th>
-        <th align="right">Amount</th>
-        <th align="right">Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr ng-repeat="transaction in message">
-        <!--<th scope="row">{{transaction.Transaction_ID}}</th>-->
-        <td>{{transaction.Counterparty}}</td>
-        <td align="right" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</td>
-        <td align="right">{{transaction.Transaction_DateTime}}</td>
-      </tr>
-    </tbody>
-  </table>
+<div class="container view-container">
+  <h5 class="page-title">Transactions</h5>
+  <div class="vertical-transaction-holder">
+
+    <div class="transaction" ng-repeat="transaction in message">
+
+      <div class="transaction-field">
+        <span class="field-key">To/From:</span>
+        <span class="field-value">{{transaction.Counterparty}}</span>
+      </div>
+
+      <div class="transaction-field" ng-show="transaction.Currency = 'GBP'">
+        <span class="field-key">Amount:</span><span class="field-value">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      </div>
+
+      <div class="transaction-field">
+        <span class="field-key">Date:</span><span class="field-value">{{transaction.Transaction_DateTime}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-transaction-holder">
+
+    <div class="table-row">
+      <span class="table-field-key table-column-to-from">To/From</span>
+      <span class="table-field-key table-column-amount text-right">Amount</span>
+      <span class="table-field-key table-column-date text-right">Date</span>
+    </div>
+
+    <div class="table-row" ng-repeat="transaction in message">
+      <span class="field-value table-field-value table-column-to-from">{{transaction.Counterparty}}</span>
+      <span class="field-value table-field-value text-right table-column-amount" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      <span class="field-value table-field-value text-right table-column-date">{{transaction.Transaction_DateTime}}</span>
+    </div>
+
+  </div>
+
 </div>

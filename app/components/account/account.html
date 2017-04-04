@@ -1,14 +1,50 @@
-<nav id="main-navbar" class="navbar navbar-default">
-  <div class="navbar-header">
-    <a id="navbar-brand" class="navbar-brand">StockChain</a>
-      <nav class="nav nav-masthead">
-        <a class="nav-link active" ui-sref="account.overview">Overview</a>
-        <a class="nav-link" ui-sref="account.transactions">Transactions</a>
-        <a class="nav-link" ui-sref="account.purchaseUnits">Add Funds</a>
-      </nav>
-      <div class="account-ctrl-btn-div">
-        <button id="logout-btn" class="btn btn-outline-primary" ui-sref="account.logout">Log out</button>
-      </div>
+<nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse" id="main-navbar">
+
+  <div class="header">
+    <button class="navbar-toggler hidden" type="button">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <object type="image/svg+xml" data="assets/img/icon.svg" class="logo"></object>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-links"
+            aria-controls="navbar-links" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </div>
+
+
+  <div class="navbar-collapse collapse" id="navbar-links" aria-expanded="false">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link active" ui-sref="account.overview" data-toggle="collapse" data-target=".navbar-collapse">Overview</a>
+      </li>
+      <li class="nav-item active">
+        <a class="nav-link" ui-sref="account.transactions" data-toggle="collapse" data-target=".navbar-collapse">Transactions</a>
+      </li>
+      <li class="nav-item active">
+        <a class="nav-link" ui-sref="account.purchaseUnits" data-toggle="collapse" data-target=".navbar-collapse">Add Funds</a>
+      </li>
+    </ul>
+    <div class="account-ctrl-btn-div">
+      <button class="btn btn-outline-primary" data-toggle="collapse" data-target=".navbar-collapse"
+              ui-sref="account.logout">Log out</button>
     </div>
+  </div>
+
+  <div class="navbar-collapse collapse" id="navbar-no-collapse">
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item active no-collapse-nav-item">
+        <a class="nav-link active" ui-sref="account.overview">Overview</a>
+      </li>
+      <li class="nav-item active no-collapse-nav-item">
+        <a class="nav-link" ui-sref="account.transactions">Transactions</a>
+      </li>
+      <li class="nav-item active no-collapse-nav-item">
+        <a class="nav-link" ui-sref="account.purchaseUnits">Add Funds</a>
+      </li>
+    </ul>
+    <div class="account-ctrl-btn-div">
+      <button class="btn btn-outline-primary" ui-sref="account.logout">Log out</button>
+    </div>
+  </div>
 </nav>
 <ui-view></ui-view>

@@ -7,7 +7,7 @@ var express = require('express'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
+    appDetails = JSON.parse(fs.readFileSync('./appDetailsSQL.json', 'utf-8')),
     bcrypt = require('bcrypt'),
     schedule = require("node-schedule");
 
@@ -24,12 +24,35 @@ var sqlConnection = sql.createConnection({
     database: appDetails.sqlDbName
 });
 
-// connect to the DB
-sqlConnection.connect(function(err){
-    if(err){
+// Handle connecting to database plus disconnection errors
+(function connectToDatabase() {
+    sqlConnection.connect(function(err){
+        if(err){
+            console.error(err);
+            // Wait 3 seconds before attempting to reconnect
+            setTimeout(connectToDatabase, 3000)
+        }
+    });
+
+    sqlConnection.on("error", function (err) {
         console.error(err);
-    }
-});
+
+        sqlConnection.destroy();
+
+        sqlConnection = sql.createConnection({
+            host: appDetails.sqlDbUrl,
+            user: appDetails.sqlDbUser,
+            password: appDetails.sqlDbPassword,
+            database: appDetails.sqlDbName
+        });
+
+        // Try to reconnect if a disconnection
+        if (err.code === "PROTOCOL_CONNECTION_LOST" || "ECONNRESET") {
+            connectToDatabase();
+        }
+    })
+})();
+
 
 /*
   Schedule a job to run and update the internal statements daily at 16:40
@@ -194,8 +217,10 @@ apiRoutes.post('/login', function (req, res) {
  */
 function authenticate(req, res, callback) {
 
+    const userRequestedUsername = req.body.username.toLocaleLowerCase();
+
     // Is username in DB?
-    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", userRequestedUsername, function (err, rows) {
         if (err) {
             // DB error
             return callback(err, null, req, res);
@@ -207,7 +232,7 @@ function authenticate(req, res, callback) {
                     return callback(err, null, req, res);
                 }
                 else if (matchingHash) {
-                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
+                    return callback(null, userRequestedUsername, req, res);
                 }
                 else {
                     err = {};

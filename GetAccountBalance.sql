@@ -1,7 +1,7 @@
 DROP PROCEDURE IF EXISTS `get_account_balance`;
 
 DELIMITER $$
-create procedure get_account_balance(IN inputUsername VARCHAR(50)) 
+create procedure get_account_balance(IN inputUsername VARCHAR(254)) 
 # Takes a username as input and returns the balance of the account associated with the username.
 # The inputUsername must be a valid username in the account_auth table.
 

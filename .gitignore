@@ -6,3 +6,8 @@ private.key
 data/
 appDetails.json
 *.log
+/appDetailsOpenChain.json
+/appDetailsSQL.json
+/testFile.js
+/openchain details
+/openchain/

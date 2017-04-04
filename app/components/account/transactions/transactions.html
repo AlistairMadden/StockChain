@@ -21,21 +21,18 @@
 
   <div class="table-transaction-holder">
 
-      <div class="table-column">
-        <span class="table-field-key">To/From</span>
-        <span class="field-value table-field-value" ng-repeat="transaction in message">{{transaction.Counterparty}}</span>
-      </div>
-
-      <div class="table-column text-right" ng-show="transaction.Currency = 'GBP'">
-        <span class="table-field-key">Amount</span>
-        <span class="field-value table-field-value text-right" ng-repeat="transaction in message">{{transaction.Transaction_Amount | currency:"£"}}</span>
-      </div>
-
-      <div class="table-column text-right">
-        <span class="table-field-key">Date</span>
-        <span class="field-value table-field-value text-right" ng-repeat="transaction in message">{{transaction.Transaction_DateTime}}</span>
-      </div>
+    <div class="table-row">
+      <span class="table-field-key table-column-to-from">To/From</span>
+      <span class="table-field-key table-column-amount text-right">Amount</span>
+      <span class="table-field-key table-column-date text-right">Date</span>
     </div>
+
+    <div class="table-row" ng-repeat="transaction in message">
+      <span class="field-value table-field-value table-column-to-from">{{transaction.Counterparty}}</span>
+      <span class="field-value table-field-value text-right table-column-amount" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      <span class="field-value table-field-value text-right table-column-date">{{transaction.Transaction_DateTime}}</span>
+    </div>
+
   </div>
 
 </div>

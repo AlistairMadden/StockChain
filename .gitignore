@@ -11,3 +11,5 @@ appDetails.json
 /testFile.js
 /openchain details
 /openchain/
+/0000_*
+/fullchain.pem

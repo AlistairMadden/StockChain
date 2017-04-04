@@ -175,7 +175,11 @@ input[type='number'] {
   flex-direction: column;
 }
 
-.table-transaction-holder {
+.table-headings {
+  display: flex;
+}
+
+.table-row {
   display: flex;
 }
 
@@ -201,8 +205,16 @@ input[type='number'] {
   margin-right: 0;
 }
 
-.table-column-amount, .table-column-date {
-  text-align: right;
+.table-column-amount {
+  flex-basis: 15%;
+}
+
+.table-column-date {
+  flex-basis: 20%;
+}
+
+.table-column-to-from{
+  flex-basis: 65%;
 }
 
 .field-value {
@@ -220,7 +232,7 @@ input[type='number'] {
 }
 
 .table-field-value {
-  padding: 0 0.5rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .field-key {
@@ -233,13 +245,13 @@ input[type='number'] {
   color: #fff;
 }
 
-@media (max-width: 517px) {
+@media (max-width: 767px) {
   .table-transaction-holder {
     display: none!important;
   }
 }
 
-@media (min-width: 518px) {
+@media (min-width: 768px) {
   .vertical-transaction-holder {
     display: none!important;
   }

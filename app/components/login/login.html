@@ -1,5 +1,7 @@
 <div id="login-container" class="container">
 
+  <h5 class="page-title">Log In</h5>
+
   <!-- Login Form -->
   <form name="transactionForm" ng-submit="login(credentials)" novalidate>
 
@@ -8,10 +10,13 @@
       !transactionForm.email.focus}">
       <label class="control-label" for="email">Email</label>
       <input id="email" type="email" class="form-control" name="email" ng-model="credentials.username"
-             ng-focus="transactionForm.email.focus=true" ng-blur="transactionForm.email.focus=false" required>
+             ng-focus="transactionForm.email.focus=true; unrecognisedCredentials=false"
+             ng-blur="transactionForm.email.focus=false" required>
 
       <p ng-show="transactionForm.email.$invalid && transactionForm.email.$touched && !transactionForm.email.focus"
-         class="has-danger form-warning">Please enter a valid email.</p>
+         class="has-danger form-warning">
+        Please enter a valid email.
+      </p>
     </div>
 
     <!-- Password -->
@@ -19,10 +24,13 @@
       transactionForm.password.$touched && !transactionForm.password.focus}">
       <label class="control-label" for="password">Password</label>
       <input id="password" type="password" class="form-control" name="password" ng-model="credentials.password"
-             ng-focus="transactionForm.password.focus=true" ng-blur="transactionForm.password.focus=false" required>
+             ng-focus="transactionForm.password.focus=true; unrecognisedCredentials=false"
+             ng-blur="transactionForm.password.focus=false" required>
 
       <p ng-show="transactionForm.password.$invalid && transactionForm.password.$touched &&
-        !transactionForm.password.focus" class="has-danger form-warning">Please enter a password.</p>
+          !transactionForm.password.focus" class="has-danger form-warning">
+        Please enter a password.
+      </p>
     </div>
 
     <p ng-show="unrecognisedCredentials" class="has-danger submit-warning">StockChain doesn't recognise this email

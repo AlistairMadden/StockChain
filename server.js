@@ -7,7 +7,7 @@ var express = require('express'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
+    appDetails = JSON.parse(fs.readFileSync('./appDetailsOpenChain.json', 'utf-8')),
     bcrypt = require('bcrypt'),
     schedule = require("node-schedule"),
     openchain = require("openchain"),
@@ -35,12 +35,34 @@ var sqlConnection = sql.createConnection({
     database: appDetails.sqlDbName
 });
 
-// connect to the DB
-sqlConnection.connect(function(err){
-    if(err){
+// Handle connecting to database plus disconnection errors
+(function connectToDatabase() {
+    sqlConnection.connect(function(err){
+        if(err){
+            console.error(err);
+            // Wait 3 seconds before attempting to reconnect
+            setTimeout(connectToDatabase, 3000)
+        }
+    });
+
+    sqlConnection.on("error", function (err) {
         console.error(err);
-    }
-});
+
+        sqlConnection.destroy();
+
+        sqlConnection = sql.createConnection({
+            host: appDetails.sqlDbUrl,
+            user: appDetails.sqlDbUser,
+            password: appDetails.sqlDbPassword,
+            database: appDetails.sqlDbName
+        });
+
+        // Try to reconnect if a disconnection
+        if (err.code === "PROTOCOL_CONNECTION_LOST" || "ECONNRESET") {
+            connectToDatabase();
+        }
+    })
+})();
 
 
 /*
@@ -150,7 +172,7 @@ app.all('*', function(req, res, next) {
     if (req.secure) {
         return next();
     }
-    res.redirect('https://' + req.hostname + ':' + app.get('port_https') + req.url);
+    res.redirect('https://' + req.hostname + req.url);
 });
 
 
@@ -216,8 +238,10 @@ apiRoutes.post('/login', function (req, res) {
  */
 function authenticate(req, res, callback) {
 
+    const userRequestedUsername = req.body.username.toLocaleLowerCase();
+
     // Is username in DB?
-    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", req.body.username, function (err, rows) {
+    sqlConnection.query("SELECT * FROM account_auth WHERE username = ?", userRequestedUsername, function (err, rows) {
         if (err) {
             // DB error
             return callback(err, null, req, res);
@@ -229,7 +253,7 @@ function authenticate(req, res, callback) {
                     return callback(err, null, req, res);
                 }
                 else if (matchingHash) {
-                    return callback(null, req.body.username.toLocaleLowerCase(), req, res);
+                    return callback(null, userRequestedUsername, req, res);
                 }
                 else {
                     err = {};
@@ -433,6 +457,22 @@ apiRoutes.post("/addFunds", restrict, function (req, res) {
 });
 
 /**
+ * Add funds to the current account. For testing this route simply adds £100
+ * to the invoking account when asked.
+ */
+apiRoutes.post("/addFunds", restrict, function (req, res) {
+    sqlConnection.query("call purchase_units(100, ?)", req.session.user, function (err, rows) {
+        if (err) {
+            console.error(err);
+            res.status(500).send({reason: "Internal DB error"});
+        }
+        else {
+            res.status(200).send();
+        }
+    })
+});
+
+/**
  * Route used to make a transaction between user accounts
  *
  *
@@ -601,7 +641,7 @@ apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
 
 apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
 
-    // Is username in DB?
+    // Is username in DB -- would this ever happen?
     sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
         if (err) {
             console.log(err);

@@ -1,19 +1,41 @@
 <div class="container profile-container">
-  <table class="table table-bordered">
-    <thead class="thead-inverse">
-      <tr>
-        <th>To/From</th>
-        <th align="right">Amount</th>
-        <th align="right">Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr ng-repeat="transaction in message">
-        <!--<th scope="row">{{transaction.Transaction_ID}}</th>-->
-        <td>{{transaction.Counterparty}}</td>
-        <td align="right" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</td>
-        <td align="right">{{transaction.Transaction_DateTime}}</td>
-      </tr>
-    </tbody>
-  </table>
+  <h5 class="page-title">Transactions</h5>
+  <div class="vertical-transaction-holder">
+
+    <div class="transaction" ng-repeat="transaction in message">
+
+      <div class="transaction-field">
+        <span class="field-key">To/From:</span>
+        <span class="field-value">{{transaction.Counterparty}}</span>
+      </div>
+
+      <div class="transaction-field" ng-show="transaction.Currency = 'GBP'">
+        <span class="field-key">Amount:</span><span class="field-value">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      </div>
+
+      <div class="transaction-field">
+        <span class="field-key">Date:</span><span class="field-value">{{transaction.Transaction_DateTime}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-transaction-holder">
+
+      <div class="table-column">
+        <span class="table-field-key">To/From</span>
+        <span class="field-value table-field-value" ng-repeat="transaction in message">{{transaction.Counterparty}}</span>
+      </div>
+
+      <div class="table-column text-right" ng-show="transaction.Currency = 'GBP'">
+        <span class="table-field-key">Amount</span>
+        <span class="field-value table-field-value text-right" ng-repeat="transaction in message">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      </div>
+
+      <div class="table-column text-right">
+        <span class="table-field-key">Date</span>
+        <span class="field-value table-field-value text-right" ng-repeat="transaction in message">{{transaction.Transaction_DateTime}}</span>
+      </div>
+    </div>
+  </div>
+
 </div>

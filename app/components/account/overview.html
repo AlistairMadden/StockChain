@@ -1,5 +1,6 @@
 <div class="container profile-container">
-  <p class="page-title">Profile</p>
+  <h5 class="page-title">Overview</h5>
+  <p>Profile:</p>
   <p>{{profileDetails.username}}</p>
   <p>Balance: {{stockBalance}} Stocks = {{currencyBalance | currency:"£"}}</p>
   <form name="transactionForm" ng-submit="makeTransaction(transactionDetails)" novalidate>

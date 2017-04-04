@@ -13,11 +13,12 @@
             },
             link: function(scope, element, attributes, ngModel) {
 
+                // Extend validators with a password check
                 ngModel.$validators.compareTo = function(confirmPassword) {
-                    scope.unmatchedPasseords = confirmPassword == scope.password;
                     return confirmPassword == scope.password;
                 };
 
+                // Every time password is altered, reevaluate the validation
                 scope.$watch("password", function() {
                     ngModel.$validate();
                 });
@@ -50,7 +51,12 @@
                     AuthService.signup(credentials).then(function () {
                         $state.go('account.overview');
                     }).catch(function (err) {
-                        console.error(err);
+                        if (err.status = 409) {
+                            $scope.error409 = true;
+                        }
+                        else {
+                            console.error(err);
+                        }
                     });
                 }
                 else {

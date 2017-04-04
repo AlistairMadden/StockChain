@@ -4,7 +4,7 @@
 
 var sql = require('mysql'),
     fs = require('fs'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetails.json', 'utf-8')),
+    appDetails = JSON.parse(fs.readFileSync('./appDetailsSQL.json', 'utf-8')),
     moment = require('moment'),
     bcrypt = require('bcrypt');
 

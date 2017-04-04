@@ -13,3 +13,4 @@ appDetails.json
 /openchain/
 /0000_*
 /fullchain.pem
+/appDetailsAWS.json

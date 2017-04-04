@@ -472,4 +472,5 @@ app.get('/*', function(req, res) {
 });
 
 app.listen(8080);
+
 console.log('StockChain is running on 8080');

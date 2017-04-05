@@ -96,9 +96,13 @@
                             $state.go('website.welcome');
                         });
                     }
+                })
+                .state('website.404', {
+                    url: '/404',
+                    templateUrl: 'components/404.html'
                 });
 
-            $urlRouterProvider.otherwise('/404');
+            $urlRouterProvider.otherwise('404');
         })
         .controller('stockChain', function ($scope) {
 

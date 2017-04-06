@@ -272,3 +272,9 @@ input[type='number'] {
     display: none!important;
   }
 }
+
+/* Add Funds */
+
+.add-funds-btn {
+  margin-bottom: 1rem;
+}

@@ -12,7 +12,7 @@
 
     <h6>Transfer Units</h6>
 
-    <form name="transactionForm" ng-submit="makeTransaction(transactionDetails)" novalidate>
+    <form name="transactionForm" class="module-container" ng-submit="makeTransaction(transactionDetails)" novalidate>
 
       <!-- Email -->
       <div class="form-group" ng-class="{'has-danger': (transactionForm.email.$invalid && transactionForm.email.$touched
@@ -66,6 +66,10 @@
         Units to {{counterparty}}.</p>
 
     </form>
+
+    <p>
+      Please send units to stockchain@example.com for testing!
+    </p>
 
   </div>
 </div>

@@ -29,50 +29,31 @@
                         $scope.submitMessages.noRecipient = true;
                     }
                     else {
-                        if ($scope.currency == "GBP") {
-                            TransactionService.makeTransactionCurrency(transactionDetails, $scope.currency)
-                                .then(function (transactionServiceRes) {
-                                    if (transactionServiceRes.status === 200) {
-                                        $scope.currencyBalance = Math
-                                                .trunc(transactionServiceRes.data.currency.balance * 100) / 100;
-                                        $scope.stockBalance = Math
-                                                .trunc(transactionServiceRes.data.stock.balance * 100) / 100;
-                                        $scope.counterparty = transactionDetails.username;
-                                        $scope.submitMessages.transactionSuccess = true;
-                                    }
-                                }).catch(function (err) {
-                                if (err.data.errCode === "AMT_ERR") {
-                                    $scope.amountError = true;
-                                    $scope.amountErrorMessage = err.data.reason;
+                        TransactionService.makeTransaction(transactionDetails, $scope.currency)
+                            .then(function (transactionServiceRes) {
+                                if (transactionServiceRes.status === 200) {
+                                    $scope.currencyBalance = Math
+                                            .trunc(transactionServiceRes.data.currency.balance * 100) / 100;
+                                    $scope.stockBalance = Math
+                                            .trunc(transactionServiceRes.data.stock.balance * 100) / 100;
+                                    $scope.counterparty = transactionDetails.username;
+                                    $scope.transferredAmount = transactionDetails.amount;
+                                    $scope.transferredCurrency = transactionDetails.currency;
+                                    $scope.submitMessages.transactionSuccess = true;
                                 }
-                                else if (err.data.errCode === "USER_ERR") {
-                                    $scope.usernameError = true;
-                                    $scope.usernameErrorMessage = err.data.reason;
-                                }
-                                else {
-                                    console.log(err);
-                                }
-                            });
-                        }
-                        else {
-                            TransactionService.makeTransaction(transactionDetails)
-                                .then(function (transactionServiceRes) {
-                                    if (transactionServiceRes.status === 200) {
-                                        $scope.currencyBalance = Math
-                                                .trunc(transactionServiceRes.data.currency.balance * 100) / 100;
-                                        $scope.stockBalance = Math
-                                                .trunc(transactionServiceRes.data.stock.balance * 100) / 100;
-                                        $scope.submitMessages.transactionSuccess = true;
-                                    }
-                                }).catch(function (err) {
-                                if (err.data.errCode === "INV_USER") {
-                                    $scope.submitMessages.invalidRecipient = true;
-                                }
-                                else if (err.status === 400) {
-                                    $scope.errorMessage = err.data.reason;
-                                }
-                            });
-                        }
+                            }).catch(function (err) {
+                            if (err.data.errCode === "AMT_ERR") {
+                                $scope.amountError = true;
+                                $scope.amountErrorMessage = err.data.reason;
+                            }
+                            else if (err.data.errCode === "USER_ERR") {
+                                $scope.usernameError = true;
+                                $scope.usernameErrorMessage = err.data.reason;
+                            }
+                            else {
+                                console.log(err);
+                            }
+                        });
                     }
                 }
             }

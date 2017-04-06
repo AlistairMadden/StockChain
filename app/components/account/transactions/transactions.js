@@ -12,6 +12,6 @@
                 }
             });
 
-            $scope.message = accountTransactions;
+            $scope.transactions = accountTransactions;
         });
 })();

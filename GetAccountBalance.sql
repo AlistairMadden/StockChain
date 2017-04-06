@@ -43,12 +43,15 @@ set @most_recent_statement =
     
 set @transactions_sum = 
 	# Stock contribution of transactions from first of the month to current time.
-    ifnull((SELECT SUM((CASE Transactions.Transaction_Code
-			 WHEN 'C' THEN Transactions.Transaction_Amount * Transactions.Quote
-			 WHEN 'D' THEN - Transactions.Transaction_Amount * Transactions.Quote END)) 
-             AS Account_Change
+	ifnull((SELECT SUM((CASE Transactions.Currency 
+		WHEN "GBP" THEN (CASE Transactions.Transaction_Code
+			WHEN 'C' THEN Transactions.Transaction_Amount * Transactions.Quote
+			WHEN 'D' THEN - Transactions.Transaction_Amount * Transactions.Quote END) 
+		WHEN "Uni" THEN (CASE Transactions.Transaction_Code
+			WHEN 'C' THEN Transactions.Transaction_Amount
+			WHEN 'D' THEN - Transactions.Transaction_Amount END) END))
 	FROM
-        (SELECT Account_ID, Transaction_Amount, Transaction_Code, Quote
+        (SELECT Account_ID, Transaction_Amount, Transaction_Code, Transaction_Currency as Currency, Quote
 		 FROM account_transaction
 		 JOIN nav_value 
          ON DATE(IF(TIME(Transaction_DateTime) < '16:40:00',

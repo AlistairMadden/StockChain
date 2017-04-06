@@ -2,15 +2,18 @@
   <h5 class="page-title">Transactions</h5>
   <div class="vertical-transaction-holder">
 
-    <div class="transaction" ng-repeat="transaction in message">
+    <div class="transaction" ng-repeat="transaction in transactions">
 
       <div class="transaction-field">
         <span class="field-key">To/From:</span>
         <span class="field-value">{{transaction.Counterparty}}</span>
       </div>
 
-      <div class="transaction-field" ng-show="transaction.Currency = 'GBP'">
-        <span class="field-key">Amount:</span><span class="field-value">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      <div class="transaction-field">
+        <span class="field-key" ng-show="transaction.Currency === 'GBP'">Amount:</span>
+        <span class="field-value" ng-show="transaction.Currency === 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</span>
+        <span class="field-key" ng-show="transaction.Currency === 'Uni'">Amount:</span>
+        <span class="field-value" ng-show="transaction.Currency === 'Uni'">{{transaction.Transaction_Amount}} Units</span>
       </div>
 
       <div class="transaction-field">
@@ -27,9 +30,14 @@
       <span class="table-field-key table-column-date text-right">Date</span>
     </div>
 
-    <div class="table-row" ng-repeat="transaction in message">
+    <div class="table-row" ng-repeat="transaction in transactions">
       <span class="field-value table-field-value table-column-to-from">{{transaction.Counterparty}}</span>
-      <span class="field-value table-field-value text-right table-column-amount" ng-show="transaction.Currency = 'GBP'">{{transaction.Transaction_Amount | currency:"£"}}</span>
+      <span class="field-value table-field-value text-right table-column-amount" ng-show="transaction.Currency === 'GBP'">
+        {{transaction.Transaction_Amount | currency:"£"}}
+      </span>
+      <span class="field-value table-field-value text-right table-column-amount" ng-show="transaction.Currency === 'Uni'">
+        {{transaction.Transaction_Amount}} Units
+      </span>
       <span class="field-value table-field-value text-right table-column-date">{{transaction.Transaction_DateTime}}</span>
     </div>
 

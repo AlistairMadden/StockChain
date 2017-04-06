@@ -9,20 +9,12 @@
         .factory('TransactionService', function($http) {
             var transactionService = {};
 
-            function makeTransaction(transactionDetails) {
+            transactionService.makeTransaction = function(transactionDetails, currency) {
+                transactionDetails.currency = currency;
                 return $http.post('/api/makeTransaction', transactionDetails).then(function(res) {
                     return res;
                 });
             }
-
-            transactionService.makeTransaction = function(transactionDetails) {
-                return makeTransaction(transactionDetails);
-            };
-
-            transactionService.makeTransactionCurrency = function (transactionDetails, currency) {
-                transactionDetails.currency = currency;
-                return makeTransaction(transactionDetails);
-            };
 
             transactionService.getAccountTransactions = function() {
                 return $http.get('/api/getAccountTransactions').then(function (res) {

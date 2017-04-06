@@ -12,7 +12,7 @@
 
     <h6>Transfer Units</h6>
 
-    <form name="transactionForm" ng-submit="makeTransaction(transactionDetails)" novalidate>
+    <form name="transactionForm" class="module-container" ng-submit="makeTransaction(transactionDetails)" novalidate>
 
       <!-- Email -->
       <div class="form-group" ng-class="{'has-danger': (transactionForm.email.$invalid && transactionForm.email.$touched
@@ -45,7 +45,7 @@
         <select class="custom-select currency-dropdown" id="inlineFormCustomSelect" ng-model="currency"
                 ng-init="currency = 'GBP'">
           <option selected="selected" value="GBP">GBP (£)</option>
-          <option value="1" value="Stocks">Units</option>
+          <option value="Units">Units</option>
         </select>
         <input id="transaction-amount" type="number" class="form-control" name="amount"
                ng-model="transactionDetails.amount"
@@ -60,12 +60,16 @@
 
       <button type="submit" class="btn btn-primary submit-btn">Send</button>
 
-      <p ng-show="submitMessages.transactionSuccess && transactionDetails.currency">Sent {{transactionDetails.amount |
+      <p ng-show="submitMessages.transactionSuccess && transferredCurrency === 'GBP'">Sent {{transferredAmount |
         currency:"£"}} to {{counterparty}}.</p>
-      <p ng-show="submitMessages.transactionSuccess && !transactionDetails.currency">Sent {{transactionDetails.amount}}
+      <p ng-show="submitMessages.transactionSuccess && transferredCurrency === 'Units'">Sent {{transferredAmount}}
         Units to {{counterparty}}.</p>
 
     </form>
+
+    <p>
+      Please send units to stockchain@example.com for testing!
+    </p>
 
   </div>
 </div>

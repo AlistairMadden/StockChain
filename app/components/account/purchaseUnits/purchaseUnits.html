@@ -6,5 +6,15 @@
     application, so the button below will add units of the fund equal to<sup>*</sup> £100 to your account. Add as many
     times as you like!
   </p>
-  <button class="btn btn-primary" ng-click="requestFinancialAid()">Add Units</button>
+  <button class="btn btn-primary add-funds-btn" ng-click="requestFinancialAid()">Add Units</button>
+
+  <p ng-show="unitsAdded">Units added to account.</p>
+
+  <p ng-show="transactionError">
+    An error occurred whilst adding funds to the account. Please try again.
+  </p>
+
+  <p class="small">
+    <sup>*</sup>But for legal reasons is not...
+  </p>
 </div>

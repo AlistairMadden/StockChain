@@ -3,7 +3,7 @@
   <h5 class="page-title">Sign Up for an Account</h5>
 
   <!-- Signup Form -->
-  <form name="signupForm" ng-submit="signup(credentials)" novalidate>
+  <form name="signupForm" class="signup-form" ng-submit="signup(credentials)" novalidate>
 
     <!-- Email -->
     <div class="form-group" ng-class="{'has-danger': ((signupForm.email.$invalid && signupForm.email.$touched ||
@@ -56,5 +56,9 @@
     </span>
 
   </form>
+
+  <p>
+    Always remember to use a unique password for each site that you visit!
+  </p>
 
 </div>

@@ -363,20 +363,48 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
             return res.status(400).send({reason: "No such user " + req.body.username, errCode: "USER_ERR"});
         }
 
-        // Look up current balance in session store (but for now, just look up direct from sql db)
-        sqlConnection.query("CALL get_account_balance(?)", req.session.user, function(err, rows) {
-            if (err) {
-                console.error(err);
-                return res.status(500).send({reason: "Error fetching account statement from DB"});
-            }
+        if(req.body.currency == "GBP") {
+            // Look up current balance in session store (but for now, just look up direct from sql db)
+            sqlConnection.query("CALL get_account_balance(?)", req.session.user, function(err, rows) {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).send({reason: "Error fetching account statement from DB"});
+                }
 
-            // Not enough money in account
-            if (rows[0][0].balance < req.body.amount) {
-                return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
-                req.body.username, errCode: "AMT_ERR"});
-            }
+                // Not enough money in account
+                if (rows[0][0].balance < req.body.amount) {
+                    return res.status(400).send({
+                        reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
+                        req.body.username, errCode: "AMT_ERR"
+                    });
+                }
 
-            sqlConnection.query("CALL make_transaction(?,?,?)", [req.session.user, req.body.username, req.body.amount], function (err) {
+                makeTransaction();
+
+            });
+        }
+
+
+        else if(req.body.currency == "Units") {
+            // Look up current balance in session store (but for now, just look up direct from sql db)
+            sqlConnection.query("CALL get_account_stock_balance(?)", req.session.user, function(err, rows) {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).send({reason: "Error fetching account statement from DB"});
+                }
+
+                // Not enough money in account
+                if (rows[0][0].balance < req.body.amount) {
+                    return res.status(400).send({reason: "Insufficient funds to make transfer of " + req.body.amount + " to " +
+                    req.body.username, errCode: "AMT_ERR"});
+                }
+
+                makeTransaction();
+            });
+        }
+
+        function makeTransaction() {
+            sqlConnection.query("CALL make_transaction(?,?,?,?)", [req.session.user, req.body.username, req.body.amount, req.body.currency], function (err) {
                 if (err) {
                     console.error(err);
                     return res.status(500).send({reason: "Error writing transaction to DB"});
@@ -400,7 +428,7 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
                     });
                 });
             });
-        });
+        }
     });
 });
 

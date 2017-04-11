@@ -183,7 +183,7 @@ app.use(session({
     name: 'sessionId', // give the cookie a different name from the standard
     resave: false, // don't save session if unmodified
     saveUninitialized: false, // don't create session until something stored
-    cookie: {secure: true} // https
+    cookie: {secure: true, sameSite: true} // https
 }));
 
 function restrict(req, res, next) {

@@ -328,10 +328,6 @@ apiRoutes.post('/signup', function (req, routeRes) {
                 var recordName = "goto";
                 var storedData = "/users/" + address + "/";
 
-                // Debugging info
-                console.log("Account path: " + dataPath);
-                console.log("Record name: " + recordName);
-
                 // Create an Openchain client and signer
                 var client = new openchain.ApiClient("http://localhost:8080/");
                 var signer = new openchain.MutationSigner(privateKey);
@@ -346,8 +342,6 @@ apiRoutes.post('/signup', function (req, routeRes) {
                         // Encode the data into a ByteBuffer
                         var newValue = openchain.encoding.encodeString(storedData);
 
-                        console.log(openchain.encoding.decodeString(dataRecord.key));
-
                         // Create a new transaction builder
                         return new openchain.TransactionBuilder(client)
                         // Add the key to the transaction builder
@@ -358,8 +352,6 @@ apiRoutes.post('/signup', function (req, routeRes) {
                             .submit();
                     })
                     .then(function (result) {
-
-                        console.log(result);
 
                         // Create another transaction to modify the account permissions
                         recordName = "acl";
@@ -375,8 +367,6 @@ apiRoutes.post('/signup', function (req, routeRes) {
                                 // Encode the data into a ByteBuffer
                                 var newValue = openchain.encoding.encodeString(storedData);
 
-                                console.log(openchain.encoding.decodeString(dataRecord.key));
-
                                 // Create a new transaction builder
                                 return new openchain.TransactionBuilder(client)
                                 // Add the key to the transaction builder
@@ -387,8 +377,6 @@ apiRoutes.post('/signup', function (req, routeRes) {
                                     .submit();
                             })
                             .then(function (result) {
-
-                                console.log(result);
 
                                 // also login
                                 authenticate(req, routeRes, handleAuthenticationResponse);
@@ -516,7 +504,6 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
         }
 
         var recipientKey = new bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
-        console.log(recipientKey);
 
         sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
             if (err) {
@@ -664,7 +651,6 @@ apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
             // Asset path
             "/asset/unit/")
             .then(function (result) {
-                console.log("Balance: " + result.balance.toString());
 
                 sqlConnection.query("select Quote from nav_value order by Quote_Date desc limit 1", function (err, rows) {
                     if (err) {

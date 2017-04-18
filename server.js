@@ -7,7 +7,7 @@ var express = require('express'),
     session = require('express-session'),
     path = require('path'),
     fs = require('fs'),
-    appDetails = JSON.parse(fs.readFileSync('./appDetailsSQL.json', 'utf-8')),
+    appDetails = JSON.parse(fs.readFileSync('./appDetailsSQLLocal.json', 'utf-8')),
     bcrypt = require('bcrypt'),
     schedule = require("node-schedule");
 

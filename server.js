@@ -11,7 +11,8 @@ var express = require('express'),
     bcrypt = require('bcrypt'),
     schedule = require("node-schedule"),
     openchain = require("openchain"),
-    bitcore = require("bitcore-lib");
+    bitcore = require("bitcore-lib"),
+    moment = require("moment");
 
 const saltRounds = 10;
 
@@ -616,14 +617,104 @@ apiRoutes.post("/makeTransaction", restrict, function (req, res) {
  * Gets the logged in user's transactions
  */
 apiRoutes.get("/getAccountTransactions", restrict, function (req, res) {
-    sqlConnection.query("call get_account_transactions(?)", req.session.user, function (err, dbResponse) {
+
+    var client = new openchain.ApiClient("http://localhost:8080/");
+
+    // Get current user
+    sqlConnection.query("SELECT * FROM account_auth WHERE Username = ?", req.session.user, function (err, rows) {
         if (err) {
-            console.error(err);
-            return res.status(500).send({reason: "Error fetching transactions from DB"});
+            console.log(err);
+            return res.status(500).send({reason: "DB query error"});
         }
 
-        res.status(200).send(dbResponse[0]);
-    })
+        if (rows.length === 0) {
+            return res.status(400).send({reason: "No such user " + req.session.user, errCode: "USER_ERR"});
+        }
+
+        var client = new openchain.ApiClient("http://localhost:8080/");
+        var userPrivateKey = new bitcore.HDPrivateKey(rows[0]["Openchain_Key"]);
+        var address = userPrivateKey.publicKey.toAddress();
+
+        // Get the record representing the balance (in Units) of the current user's account
+        client.getAccountRecord("/user/" + address + "/", "/asset/unit/").then(function (accountRecord) {
+
+            // Get the hashes of all changes (mutations) to the account
+            client.getRecordMutations(accountRecord.key).then(function (mutations) {
+
+                var transactions = [];
+
+                // For each mutation, get the transaction that produced it
+                var transactionRequests = mutations.map(function (item) {
+                    return new Promise(function (resolve) {
+                        client.getTransaction(item).then(function(transaction) {
+                            transactions.push(transaction);
+                            resolve();
+                        });
+                    });
+                });
+                Promise.all(transactionRequests).then(function () {
+
+                    var parsedTransactions = [];
+
+                    // For each transaction, make a parsed transaction which will be sent to the front end.
+                    var transactionRequests = transactions.map(function (transaction) {
+
+                        var parsedTransaction = {
+                            // Change to be in line with SQL
+                            Transaction_DateTime: moment(transaction.transaction.timestamp.toString(), "X"),
+                            Transaction_Currency: "Units"
+                        };
+
+                        return new Promise(function (resolve) {
+                            // For each record in the transaction
+                            var recordRequests = transaction["mutation"]["records"].map(function (record) {
+
+                                return new Promise(function(resolve) {
+                                    const key = openchain.RecordKey.parse(record.key);
+
+                                    if (key.path["parts"][0] === "stockchain") {
+                                        parsedTransaction.Counterparty = "StockChain";
+                                        resolve();
+                                    }
+                                    else {
+                                        // If the record relates to the user, we want to calculate the difference in balance
+                                        // between the previous version of the record and the value this transaction gave it.
+                                        // ie. How much was sent/received from the Counterparty.
+                                        if (key.path["parts"][1] === address.toString()) {
+                                            client.getAccountRecord(key.path.toString(), key.name, record.version).then(function (previousRecord) {
+                                                var newValue = record.value == null ? null : openchain.encoding.decodeInt64(record.value.data);
+                                                parsedTransaction.Transaction_Amount = (newValue == null ? null : newValue.subtract(previousRecord.balance)).toInt();
+                                                parsedTransaction.Balance = newValue;
+                                                resolve();
+                                            });
+                                        }
+                                        // If the record related to the Counterparty, just add the Counterparty to the parsed
+                                        // transaction.
+                                        else {
+                                            parsedTransaction.Counterparty = key.path["parts"][1];
+                                            resolve();
+                                        }
+                                    }
+                                });
+                            });
+
+                            // Once both records retrieved and information added to the parsed transaction, push onto
+                            // an array of all transactions.
+                            Promise.all(recordRequests).then(function () {
+                                parsedTransactions.push(parsedTransaction);
+                                resolve();
+                            });
+                        });
+                    });
+
+                    Promise.all(transactionRequests).then(function() {
+
+                        res.status(200).send(parsedTransactions);
+                    });
+                });
+            });
+        });
+    });
 });
 
 apiRoutes.get("/getAccountBalance", restrict, function (req, res) {
